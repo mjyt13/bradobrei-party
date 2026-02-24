@@ -1,0 +1,36 @@
+@startuml bradobrei-usecase
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Клиент" as Client
+actor "Сотрудник" as Staff
+actor "Мастер" as Master
+actor "Персонал" as Office
+actor "Администратор" as Admin
+
+Staff <|-- Master
+Staff <|-- Office
+Staff <|-- Admin
+
+rectangle "Брадобрей-пати" {
+  (Авторизация в системе) as Auth
+  
+  Client -- (Просмотр каталога услуг и мастеров)
+  Client -- (Запись на стрижку/услугу)
+  Client -- (Оставить отзыв)
+  Client -- (Оплата услуги)
+  
+  Master -- (Управление графиком работы)
+  Master -- (Подтверждение записи)
+  Master -- (Списание расходных материалов)
+  
+  Office -- (Генерация аналитических отчетов)
+  Office -- (Управление персоналом)
+  
+  Admin -- (Полное управление данными ИС)
+  Admin -- (Настройка ролей доступа)
+  
+  (Запись на стрижку/услугу) .> Auth : <<include>>
+  (Генерация аналитических отчетов) .> Auth : <<include>>
+}
+@enduml

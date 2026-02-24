@@ -1,0 +1,93 @@
+@startuml class
+skinparam classAttributeIconSize 0
+hide circle
+
+
+class User {
+    + Long id
+    + String login
+    + String password
+    + Role role
+    + Boolean isActive()
+}
+
+enum Role {
+    ADMIN
+    MASTER_1
+    MASTER_2
+    HR_OFFICER
+    ACCOUNTANT
+    NETWORK_MANAGER
+    CLIENT
+}
+
+class Person {
+    + String firstName
+    + String lastName
+    + String phone
+    + String email
+}
+
+class Employee {
+    + String specialization
+    + Double baseSalary
+    + Boolean onShift
+    --
+    + calculateCurrentMonthSalary()
+}
+
+class Salon {
+    + Long id
+    + String address
+    + String workHours
+    + Double latitude
+    + Double longitude
+}
+
+class Service {
+    + Long id
+    + String name
+    + Double price
+    + Integer durationMinutes
+}
+
+class Booking {
+    + Long id
+    + LocalDateTime startTime
+    + LocalDateTime endTime
+    + BookingStatus status
+    + Double finalPrice
+    --
+    + validateDuration()
+}
+
+class Resource {
+    + Long id
+    + String name
+    + String unit
+    + Double quantityInStock
+}
+
+class Feedback {
+    + Long id
+    + String text
+    + Integer rating
+    + LocalDateTime createdAt
+}
+
+' Relations
+User <|-- Person
+Person <|-- Employee
+Person <|-- Client
+
+Employee "*" o-- "*" Salon : закреплен за
+Booking "1" *-- "1" Client : создал
+Booking "1" *-- "1" Employee : назначен мастер
+Booking "1" *-- "1" Salon : место оказания
+Booking "1" *-- "1" Service : тип услуги
+
+Service "*" *-- "*" Resource : требует расхода
+Feedback "*" o-- "1" User : автор
+Feedback "*" o-- "1" Employee : о мастере (опц)
+
+@enduml

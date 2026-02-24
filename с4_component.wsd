@@ -1,0 +1,43 @@
+@startuml с4_component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+Container(web_app, "Single-Page Application", "JavaScript, React", "Предоставляет интерфейс пользователю")
+ContainerDb(database, "Database", "PostgreSQL", "Хранит данные системы")
+
+System_Boundary(api_boundary, "API Application (Backend)") {
+    Component(auth_ctrl, "Security Controller", "Spring Security", "Обрабатывает аутентификацию и проверку ролей (7 типов ролей)")
+    Component(booking_ctrl, "Booking Controller", "Spring MVC Rest", "Эндпоинты для создания и редактирования записей")
+    Component(report_ctrl, "Report Controller", "Spring MVC Rest", "Эндпоинты для запроса формирования 10 видов PDF-отчетов")
+    
+    Component(booking_svc, "Booking Service", "Java Service", "Бизнес-логика: проверка длительности (>=1ч), пересечений в графике, расчет рейтинга")
+    Component(inventory_svc, "Inventory Service", "Java Service", "Логика списания расходных материалов при оказании услуг")
+    Component(report_svc, "Report Engine", "iText / JasperReports", "Генерация PDF-файлов на основе данных из БД")
+    
+    Component(data_repo, "Data Repository", "Spring Data JPA", "Абстракция над базой данных для выполнения SQL-запросов")
+    
+    Component(notification_client, "Notification Client", "Java / HTTP", "Интеграция с внешним сервисом уведомлений")
+}
+
+System_Ext(mail_service, "E-mail/SMS Service", "Внешняя система")
+
+Rel(web_app, auth_ctrl, "Передает учетные данные", "JSON/HTTPS")
+Rel(web_app, booking_ctrl, "Запрос на бронирование/просмотр", "JSON/HTTPS")
+Rel(web_app, report_ctrl, "Запрос PDF-отчета", "JSON/HTTPS")
+
+Rel(auth_ctrl, data_repo, "Проверяет права и сессию", "JPA")
+Rel(booking_ctrl, booking_svc, "Делегирует создание записи")
+Rel(report_ctrl, report_svc, "Запрашивает формирование файла")
+
+Rel(booking_svc, data_repo, "Читает/Пишет данные о записях", "JPA")
+Rel(booking_svc, inventory_svc, "Вызывает списание ресурсов")
+Rel(booking_svc, notification_client, "Инициирует отправку уведомления")
+
+Rel(inventory_svc, data_repo, "Обновляет остатки материалов", "JPA")
+Rel(report_svc, data_repo, "Собирает агрегированные данные", "JPA")
+
+Rel(data_repo, database, "Выполняет запросы", "SQL")
+Rel(notification_client, mail_service, "Отправляет API-запросы", "HTTPS")
+
+@enduml

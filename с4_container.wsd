@@ -1,0 +1,26 @@
+@startuml с4_container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(client, "Клиент/Сотрудник", "Пользователь системы")
+
+System_Boundary(bb_system, "ИС Брадобрей-пати") {
+    Container(web_app, "Single-Page Application", "JavaScript, React/Vue", "Предоставляет пользователю интерфейс для бронирования, управления мастерами и просмотра аналитики в браузере")
+    Container(api_app, "API Application", "Java, Spring Boot", "Обеспечивает бизнес-логику: авторизацию, расчет окладов, списание материалов и формирование PDF-отчетов")
+    ContainerDb(database, "Database", "PostgreSQL", "Хранит данные о пользователях, салонах, услугах, графиках и транзакциях")
+}
+
+System_Ext(payment_gate, "Платежный шлюз", "Внешний API для эквайринга")
+System_Ext(map_service, "Гео-сервис", "Картографический сервис (Яндекс/Google)")
+System_Ext(mail_service, "Notification Service", "Отправка e-mail и SMS")
+
+Rel(client, web_app, "Использует", "HTTPS")
+Rel(web_app, api_app, "Делает API вызовы к", "JSON/HTTPS")
+Rel(api_app, database, "Читает и записывает данные", "JDBC/SQL")
+
+Rel(api_app, payment_gate, "Инициирует оплату", "HTTPS")
+Rel(api_app, mail_service, "Отправляет запросы на уведомления", "SMTP/HTTPS")
+Rel(web_app, map_service, "Загружает карты и координаты", "HTTPS")
+
+@enduml

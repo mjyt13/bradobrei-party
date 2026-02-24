@@ -1,0 +1,20 @@
+@startuml c4_context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(client, "Клиент", "Пользуется услугами барбершопа, записывается онлайн")
+Person(staff, "Персонал", "Мастера, менеджеры, бухгалтеры, администраторы")
+
+System(bb_system, "Брадобрей-пати", "Веб-приложение для управления сетью барбершопов, записями и аналитикой")
+
+System_Ext(payment_gate, "Платежный шлюз", "Обработка онлайн-платежей")
+System_Ext(map_service, "Гео-сервис", "Отображение салонов на карте")
+System_Ext(mail_service, "E-mail/SMS сервис", "Рассылка уведомлений о записях")
+
+Rel(client, bb_system, "Просматривает услуги, записывается, оплачивает")
+Rel(staff, bb_system, "Управляет записями, штатом и смотрит отчеты")
+Rel(bb_system, payment_gate, "Проводит платежи")
+Rel(bb_system, map_service, "Запрашивает координаты и карты")
+Rel(bb_system, mail_service, "Отправляет уведомления")
+@enduml
