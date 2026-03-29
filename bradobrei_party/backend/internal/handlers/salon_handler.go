@@ -21,9 +21,10 @@ func NewSalonHandler(salonService *services.SalonService) *SalonHandler {
 
 // GetAll godoc
 // @Summary Список салонов
-// @Description Базовый справочный эндпоинт для клиентского просмотра доступных филиалов и аналитики 2.2.2.
+// @Description Базовый справочный эндпоинт для просмотра доступных филиалов и аналитики 2.2.2.
 // @Tags salons
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} models.Salon
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /salons [get]
@@ -36,7 +37,17 @@ func (h *SalonHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, salons)
 }
 
-// GET /api/v1/salons/:id
+// GetByID godoc
+// @Summary Салон по ID
+// @Description Возвращает один салон с базовой информацией.
+// @Tags salons
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID салона"
+// @Success 200 {object} models.Salon
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /salons/{id} [get]
 func (h *SalonHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -47,15 +58,26 @@ func (h *SalonHandler) GetByID(c *gin.Context) {
 	salon, err := h.salonService.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error: "not_found", Code: 404, Message: "Салон не найден",
+			Error:   "not_found",
+			Code:    404,
+			Message: "Салон не найден",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, salon)
 }
 
-// GET /api/v1/salons/:id/masters
-// Поддерживает клиентский сценарий выбора работающих мастеров в филиале.
+// GetMasters godoc
+// @Summary Мастера салона
+// @Description Возвращает мастеров, закреплённых за выбранным салоном.
+// @Tags salons
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID салона"
+// @Success 200 {array} models.EmployeeProfile
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /salons/{id}/masters [get]
 func (h *SalonHandler) GetMasters(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -71,12 +93,25 @@ func (h *SalonHandler) GetMasters(c *gin.Context) {
 	c.JSON(http.StatusOK, masters)
 }
 
-// POST /api/v1/salons  (ADMIN, NETWORK_MANAGER)
+// Create godoc
+// @Summary Создать салон
+// @Description Создаёт новый салон.
+// @Tags salons
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.Salon true "Данные салона"
+// @Success 201 {object} models.Salon
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /salons [post]
 func (h *SalonHandler) Create(c *gin.Context) {
 	var salon models.Salon
 	if err := c.ShouldBindJSON(&salon); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "bad_request", Code: 400, Message: err.Error(),
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
 		})
 		return
 	}
@@ -88,7 +123,20 @@ func (h *SalonHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, salon)
 }
 
-// PUT /api/v1/salons/:id  (ADMIN, NETWORK_MANAGER)
+// Update godoc
+// @Summary Обновить салон
+// @Description Обновляет данные существующего салона.
+// @Tags salons
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID салона"
+// @Param request body models.Salon true "Обновлённые данные салона"
+// @Success 200 {object} models.Salon
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /salons/{id} [put]
 func (h *SalonHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -99,14 +147,18 @@ func (h *SalonHandler) Update(c *gin.Context) {
 	existing, err := h.salonService.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error: "not_found", Code: 404, Message: "Салон не найден",
+			Error:   "not_found",
+			Code:    404,
+			Message: "Салон не найден",
 		})
 		return
 	}
 
 	if err := c.ShouldBindJSON(existing); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "bad_request", Code: 400, Message: err.Error(),
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
 		})
 		return
 	}
@@ -118,7 +170,17 @@ func (h *SalonHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, existing)
 }
 
-// DELETE /api/v1/salons/:id  (ADMIN only)
+// Delete godoc
+// @Summary Удалить салон
+// @Description Удаляет салон из системы.
+// @Tags salons
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID салона"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /salons/{id} [delete]
 func (h *SalonHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

@@ -145,6 +145,10 @@ func (s *BookingService) GetByID(id uint) (*models.Booking, error) {
 	return s.bookingRepo.GetByID(id)
 }
 
+func (s *BookingService) GetAll() ([]models.Booking, error) {
+	return s.bookingRepo.GetAll()
+}
+
 func (s *BookingService) GetByClient(clientID uint) ([]models.Booking, error) {
 	return s.bookingRepo.GetByClientID(clientID)
 }

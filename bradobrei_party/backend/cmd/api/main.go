@@ -32,6 +32,10 @@ import (
 // @description Backend API для системы управления сетью барбершопов Bradobrei Party.
 // @BasePath /api/v1
 // @schemes http
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT токен в формате `Bearer <token>`.
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println(".env не найден")
@@ -83,6 +87,7 @@ func main() {
 	serviceRepo := repository.NewServiceRepository(db)
 	materialRepo := repository.NewMaterialRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
 
 	authSvc := services.NewAuthService(userRepo)
 	bookingSvc := services.NewBookingService(bookingRepo, invRepo, db)
@@ -91,6 +96,7 @@ func main() {
 	serviceSvc := services.NewServiceService(serviceRepo, employeeRepo)
 	materialSvc := services.NewMaterialService(materialRepo)
 	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo)
+	paymentSvc := services.NewPaymentService(paymentRepo, bookingRepo)
 
 	authH := handlers.NewAuthHandler(authSvc)
 	bookingH := handlers.NewBookingHandler(bookingSvc)
@@ -100,6 +106,7 @@ func main() {
 	serviceH := handlers.NewServiceHandler(serviceSvc)
 	materialH := handlers.NewMaterialHandler(materialSvc)
 	employeeH := handlers.NewEmployeeHandler(employeeSvc)
+	paymentH := handlers.NewPaymentHandler(paymentSvc)
 
 	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
@@ -118,6 +125,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "alive", "version": "1.0", "db": "connected"})
 	})
+	r.GET("/", authH.DocsRedirect)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
@@ -137,6 +145,8 @@ func main() {
 	api := v1.Group("/")
 	api.Use(middleware.AuthRequired(jwtSecret))
 	{
+		api.GET("/me", authH.Me)
+
 		salons := api.Group("/salons")
 		{
 			salons.GET("", salonH.GetAll)
@@ -192,6 +202,7 @@ func main() {
 
 		bookings := api.Group("/bookings")
 		{
+			bookings.GET("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager), bookingH.GetAll)
 			bookings.POST("", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.Create)
 			bookings.GET("/my", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.GetMy)
 			bookings.GET("/master", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster, models.RoleAdmin), bookingH.GetByMaster)
@@ -204,6 +215,14 @@ func main() {
 		{
 			reviews.POST("", reviewH.Create)
 			reviews.GET("", middleware.RequireRoles(models.RoleAdmin), reviewH.GetAll)
+			reviews.GET("/:id", middleware.RequireRoles(models.RoleAdmin), reviewH.GetByID)
+		}
+
+		payments := api.Group("/payments")
+		{
+			payments.GET("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager), paymentH.GetAll)
+			payments.GET("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager), paymentH.GetByID)
+			payments.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant), paymentH.Create)
 		}
 
 		reports := api.Group("/reports")

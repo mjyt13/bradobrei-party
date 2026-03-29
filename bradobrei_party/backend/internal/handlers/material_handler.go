@@ -19,7 +19,15 @@ func NewMaterialHandler(materialService *services.MaterialService) *MaterialHand
 	return &MaterialHandler{materialService: materialService}
 }
 
-// GET /api/v1/materials
+// GetAll godoc
+// @Summary Список материалов
+// @Description Возвращает все материалы.
+// @Tags materials
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Material
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /materials [get]
 func (h *MaterialHandler) GetAll(c *gin.Context) {
 	list, err := h.materialService.GetAll()
 	if err != nil {
@@ -29,7 +37,17 @@ func (h *MaterialHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-// GET /api/v1/materials/:id
+// GetByID godoc
+// @Summary Материал по ID
+// @Description Возвращает один материал по идентификатору.
+// @Tags materials
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID материала"
+// @Success 200 {object} models.Material
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /materials/{id} [get]
 func (h *MaterialHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -39,19 +57,34 @@ func (h *MaterialHandler) GetByID(c *gin.Context) {
 	m, err := h.materialService.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error: "not_found", Code: 404, Message: "Материал не найден",
+			Error:   "not_found",
+			Code:    404,
+			Message: "Материал не найден",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, m)
 }
 
-// POST /api/v1/materials  (ADMIN)
+// Create godoc
+// @Summary Создать материал
+// @Description Создаёт новый материал.
+// @Tags materials
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.Material true "Данные материала"
+// @Success 201 {object} models.Material
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /materials [post]
 func (h *MaterialHandler) Create(c *gin.Context) {
 	var m models.Material
 	if err := c.ShouldBindJSON(&m); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "bad_request", Code: 400, Message: err.Error(),
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
 		})
 		return
 	}
@@ -62,7 +95,20 @@ func (h *MaterialHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, m)
 }
 
-// PUT /api/v1/materials/:id  (ADMIN)
+// Update godoc
+// @Summary Обновить материал
+// @Description Обновляет существующий материал.
+// @Tags materials
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID материала"
+// @Param request body models.Material true "Обновлённые данные материала"
+// @Success 200 {object} models.Material
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /materials/{id} [put]
 func (h *MaterialHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -72,13 +118,17 @@ func (h *MaterialHandler) Update(c *gin.Context) {
 	existing, err := h.materialService.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error: "not_found", Code: 404, Message: "Материал не найден",
+			Error:   "not_found",
+			Code:    404,
+			Message: "Материал не найден",
 		})
 		return
 	}
 	if err := c.ShouldBindJSON(existing); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "bad_request", Code: 400, Message: err.Error(),
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
 		})
 		return
 	}
@@ -90,7 +140,17 @@ func (h *MaterialHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, existing)
 }
 
-// DELETE /api/v1/materials/:id  (ADMIN)
+// Delete godoc
+// @Summary Удалить материал
+// @Description Удаляет материал.
+// @Tags materials
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID материала"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /materials/{id} [delete]
 func (h *MaterialHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -104,9 +164,19 @@ func (h *MaterialHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Материал удалён"})
 }
 
-// PUT /api/v1/materials/service/:serviceId  (ADMIN, ADVANCED_MASTER)
-// Установить норму расхода для услуги
-// body: [{"material_id": 1, "quantity_per_use": 50.5}, ...]
+// SetServiceMaterials godoc
+// @Summary Установить норму расхода для услуги
+// @Description Назначает список материалов и норм расхода для выбранной услуги.
+// @Tags materials
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param serviceId path int true "ID услуги"
+// @Param request body []models.ServiceMaterial true "Материалы услуги"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /materials/service/{serviceId} [put]
 func (h *MaterialHandler) SetServiceMaterials(c *gin.Context) {
 	serviceID, err := strconv.ParseUint(c.Param("serviceId"), 10, 64)
 	if err != nil {
@@ -117,7 +187,9 @@ func (h *MaterialHandler) SetServiceMaterials(c *gin.Context) {
 	var items []models.ServiceMaterial
 	if err := c.ShouldBindJSON(&items); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "bad_request", Code: 400, Message: err.Error(),
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
 		})
 		return
 	}

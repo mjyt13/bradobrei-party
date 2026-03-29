@@ -70,7 +70,16 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 		return nil, err
 	}
 
-	return &dto.LoginResponse{Token: token, User: *user}, nil
+	return &dto.LoginResponse{Token: token}, nil
+}
+
+func (s *AuthService) GetCurrentUser(userID uint) (*models.User, error) {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, errors.New("пользователь не найден")
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) generateToken(user *models.User) (string, error) {

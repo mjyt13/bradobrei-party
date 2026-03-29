@@ -1,39 +1,91 @@
 basePath: /api/v1
 definitions:
+  dto.AssignServiceToMasterRequest:
+    properties:
+      target_user_id:
+        example: 12
+        type: integer
+    required:
+    - target_user_id
+    type: object
   dto.CreateBookingRequest:
     properties:
       master_id:
+        example: 2
         type: integer
       notes:
+        example: Клиент просит оформить бороду и стрижку без ожидания.
         type: string
       salon_id:
+        example: 1
         type: integer
       service_ids:
+        example:
+        - 1
+        - 2
         items:
           type: integer
         minItems: 1
         type: array
       start_time:
+        example: "2026-03-29T14:00:00Z"
         type: string
     required:
     - salon_id
     - service_ids
     - start_time
     type: object
+  dto.CreatePaymentRequest:
+    properties:
+      amount:
+        example: 2500
+        type: number
+      booking_id:
+        example: 1
+        type: integer
+      external_transaction_id:
+        example: txn_local_12345
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.PaymentStatus'
+        example: PENDING
+    required:
+    - booking_id
+    type: object
+  dto.CreateReviewRequest:
+    properties:
+      rating:
+        example: 5
+        maximum: 5
+        minimum: 1
+        type: integer
+      text:
+        example: Отличный сервис и удобная запись.
+        type: string
+    required:
+    - rating
+    - text
+    type: object
   dto.ErrorResponse:
     properties:
       code:
+        example: 400
         type: integer
       error:
+        example: bad_request
         type: string
       message:
+        example: invalid request body
         type: string
     type: object
   dto.LoginRequest:
     properties:
       password:
+        example: password
         type: string
       username:
+        example: admin
         type: string
     required:
     - password
@@ -42,24 +94,30 @@ definitions:
   dto.LoginResponse:
     properties:
       token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dev-token
         type: string
-      user:
-        $ref: '#/definitions/models.User'
     type: object
   dto.RegisterRequest:
     properties:
       email:
+        example: admin@example.com
         type: string
       full_name:
+        example: Иван Петров
         type: string
       password:
+        example: password
         minLength: 6
         type: string
       phone:
+        example: "+79991234567"
         type: string
       role:
-        $ref: '#/definitions/models.UserRole'
+        allOf:
+        - $ref: '#/definitions/models.UserRole'
+        example: ADMINISTRATOR
       username:
+        example: admin
         maxLength: 50
         minLength: 3
         type: string
@@ -67,6 +125,11 @@ definitions:
     - full_name
     - password
     - username
+    type: object
+  dto.UserResponse:
+    properties:
+      user:
+        $ref: '#/definitions/models.User'
     type: object
   models.Booking:
     properties:
@@ -159,6 +222,7 @@ definitions:
       user_id:
         type: integer
       work_schedule:
+        description: '{"mon":"9-18","tue":"9-18",...}'
         type: string
     type: object
   models.Material:
@@ -168,6 +232,7 @@ definitions:
       name:
         type: string
       unit:
+        description: мл, шт, гр
         type: string
     type: object
   models.Payment:
@@ -199,6 +264,22 @@ definitions:
     - PaymentSuccess
     - PaymentFailed
     - PaymentRefunded
+  models.Review:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      rating:
+        description: 1-5
+        type: integer
+      text:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      user_id:
+        type: integer
+    type: object
   models.Salon:
     properties:
       address:
@@ -214,12 +295,14 @@ definitions:
       id:
         type: integer
       location:
+        description: PostGIS, опционально
         type: string
       max_staff:
         type: integer
       name:
         type: string
       status:
+        description: OPEN/CLOSED
         type: string
       updated_at:
         type: string
@@ -309,11 +392,19 @@ info:
   title: Bradobrei Party API
   version: "1.0"
 paths:
+  /:
+    get:
+      description: Перенаправляет на Swagger UI.
+      responses: {}
+      summary: Перейти к документации
+      tags:
+      - docs
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Проверяет логин и пароль, возвращает JWT.
+      description: Проверяет логин и пароль, возвращает только JWT для дальнейшей
+        авторизации.
       parameters:
       - description: Данные для входа
         in: body
@@ -367,6 +458,27 @@ paths:
       tags:
       - auth
   /bookings:
+    get:
+      description: Возвращает все бронирования для административного и аналитического
+        просмотра.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Booking'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список бронирований
+      tags:
+      - bookings
     post:
       consumes:
       - application/json
@@ -395,6 +507,422 @@ paths:
       summary: Создать бронирование
       tags:
       - bookings
+  /bookings/{id}:
+    get:
+      description: Возвращает одно бронирование со связанными услугами и платежом.
+      parameters:
+      - description: ID бронирования
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Booking'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Бронирование по ID
+      tags:
+      - bookings
+  /bookings/{id}/cancel:
+    post:
+      description: Отменяет бронирование по правилам роли и владельца записи.
+      parameters:
+      - description: ID бронирования
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отменить бронирование
+      tags:
+      - bookings
+  /bookings/{id}/confirm:
+    post:
+      description: Подтверждает бронирование и списывает материалы.
+      parameters:
+      - description: ID бронирования
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Booking'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Подтвердить бронирование
+      tags:
+      - bookings
+  /bookings/master:
+    get:
+      description: Рабочий эндпоинт мастера для просмотра назначенных записей.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Booking'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Бронирования мастера
+      tags:
+      - bookings
+  /bookings/my:
+    get:
+      description: Возвращает бронирования текущего клиента.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Booking'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Мои бронирования
+      tags:
+      - bookings
+  /materials:
+    get:
+      description: Возвращает все материалы.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Material'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список материалов
+      tags:
+      - materials
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новый материал.
+      parameters:
+      - description: Данные материала
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Material'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Material'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать материал
+      tags:
+      - materials
+  /materials/{id}:
+    delete:
+      description: Удаляет материал.
+      parameters:
+      - description: ID материала
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить материал
+      tags:
+      - materials
+    get:
+      description: Возвращает один материал по идентификатору.
+      parameters:
+      - description: ID материала
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Material'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Материал по ID
+      tags:
+      - materials
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующий материал.
+      parameters:
+      - description: ID материала
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновлённые данные материала
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Material'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Material'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновить материал
+      tags:
+      - materials
+  /materials/service/{serviceId}:
+    put:
+      consumes:
+      - application/json
+      description: Назначает список материалов и норм расхода для выбранной услуги.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: serviceId
+        required: true
+        type: integer
+      - description: Материалы услуги
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.ServiceMaterial'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Установить норму расхода для услуги
+      tags:
+      - materials
+  /me:
+    get:
+      description: Возвращает пользователя, идентифицированного по JWT из заголовка
+        Authorization.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Текущий пользователь
+      tags:
+      - auth
+  /payments:
+    get:
+      description: Возвращает список платежей по бронированиям.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Payment'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список платежей
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      description: Создаёт платёж для существующего бронирования.
+      parameters:
+      - description: Данные платежа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать платёж
+      tags:
+      - payments
+  /payments/{id}:
+    get:
+      description: Возвращает один платёж по идентификатору.
+      parameters:
+      - description: ID платежа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Платёж по ID
+      tags:
+      - payments
   /reports/employees:
     get:
       produces:
@@ -529,10 +1057,91 @@ paths:
       summary: Отчёт 2.2.3 Популярность услуг
       tags:
       - reports
+  /reviews:
+    get:
+      description: Возвращает все отзывы с данными пользователя.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Review'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список отзывов
+      tags:
+      - reviews
+    post:
+      consumes:
+      - application/json
+      description: Сохраняет отзыв текущего пользователя о качестве обслуживания.
+      parameters:
+      - description: Данные отзыва
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Review'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать отзыв
+      tags:
+      - reviews
+  /reviews/{id}:
+    get:
+      description: Возвращает один отзыв с данными автора.
+      parameters:
+      - description: ID отзыва
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Review'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отзыв по ID
+      tags:
+      - reviews
   /salons:
     get:
-      description: Базовый справочный эндпоинт для клиентского просмотра доступных
-        филиалов и аналитики 2.2.2.
+      description: Базовый справочный эндпоинт для просмотра доступных филиалов и
+        аналитики 2.2.2.
       produces:
       - application/json
       responses:
@@ -546,9 +1155,413 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Список салонов
       tags:
       - salons
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новый салон.
+      parameters:
+      - description: Данные салона
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Salon'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Salon'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать салон
+      tags:
+      - salons
+  /salons/{id}:
+    delete:
+      description: Удаляет салон из системы.
+      parameters:
+      - description: ID салона
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить салон
+      tags:
+      - salons
+    get:
+      description: Возвращает один салон с базовой информацией.
+      parameters:
+      - description: ID салона
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Salon'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Салон по ID
+      tags:
+      - salons
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные существующего салона.
+      parameters:
+      - description: ID салона
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновлённые данные салона
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Salon'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Salon'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновить салон
+      tags:
+      - salons
+  /salons/{id}/masters:
+    get:
+      description: Возвращает мастеров, закреплённых за выбранным салоном.
+      parameters:
+      - description: ID салона
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EmployeeProfile'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Мастера салона
+      tags:
+      - salons
+  /services:
+    get:
+      description: Возвращает все услуги сети.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Service'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список услуг
+      tags:
+      - services
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую услугу.
+      parameters:
+      - description: Данные услуги
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Service'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать услугу
+      tags:
+      - services
+  /services/{id}:
+    delete:
+      description: Удаляет услугу.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить услугу
+      tags:
+      - services
+    get:
+      description: Возвращает одну услугу по идентификатору.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Услуга по ID
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующую услугу.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновлённые данные услуги
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Service'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновить услугу
+      tags:
+      - services
+  /services/{id}/assign-master:
+    post:
+      consumes:
+      - application/json
+      description: Привязывает услугу к мастеру.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Пользователь-мастер
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignServiceToMasterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Назначить услугу мастеру
+      tags:
+      - services
+  /services/{id}/assign-master/{profileId}:
+    delete:
+      description: Отвязывает услугу от профиля мастера.
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID профиля мастера
+        in: path
+        name: profileId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Убрать услугу у мастера
+      tags:
+      - services
+  /services/my:
+    get:
+      description: Возвращает услуги, привязанные к текущему мастеру.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Service'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Мои услуги
+      tags:
+      - services
 schemes:
 - http
+securityDefinitions:
+  BearerAuth:
+    description: JWT токен в формате `Bearer <token>`.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

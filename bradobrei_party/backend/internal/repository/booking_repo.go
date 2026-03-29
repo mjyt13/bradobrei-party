@@ -20,6 +20,19 @@ func (r *BookingRepository) Create(b *models.Booking) error {
 	return r.db.Create(b).Error
 }
 
+func (r *BookingRepository) GetAll() ([]models.Booking, error) {
+	var bookings []models.Booking
+	err := r.db.
+		Preload("Client").
+		Preload("Master").
+		Preload("Salon").
+		Preload("Items.Service").
+		Preload("Payment").
+		Order("start_time DESC").
+		Find(&bookings).Error
+	return bookings, err
+}
+
 func (r *BookingRepository) GetByID(id uint) (*models.Booking, error) {
 	var b models.Booking
 	err := r.db.
