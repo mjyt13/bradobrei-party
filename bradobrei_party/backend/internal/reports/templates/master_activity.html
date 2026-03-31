@@ -1,0 +1,41 @@
+{{define "content"}}
+<section class="report-section">
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>Мастеров</span>
+      <strong>{{len .Rows}}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Отчёт</span>
+      <strong>Активность мастеров</strong>
+    </article>
+    <article class="summary-card">
+      <span>Период</span>
+      <strong>{{safePeriod .Meta.PeriodFrom .Meta.PeriodTo}}</strong>
+    </article>
+  </div>
+
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>ID мастера</th>
+        <th>ФИО</th>
+        <th>Услуги</th>
+        <th>Выручка</th>
+        <th>Материалы</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td>{{.MasterID}}</td>
+        <td>{{.FullName}}</td>
+        <td>{{.ServiceCount}}</td>
+        <td>{{formatMoney .Revenue}}</td>
+        <td>{{formatMoney .MaterialCost}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

@@ -1,0 +1,43 @@
+{{define "content"}}
+<section class="report-section">
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>Филиалов</span>
+      <strong>{{len .Rows}}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Отчёт</span>
+      <strong>Активность филиалов</strong>
+    </article>
+    <article class="summary-card">
+      <span>Период</span>
+      <strong>{{safePeriod .Meta.PeriodFrom .Meta.PeriodTo}}</strong>
+    </article>
+  </div>
+
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>ID салона</th>
+        <th>Филиал</th>
+        <th>Адрес</th>
+        <th>Клиенты</th>
+        <th>Услуги</th>
+        <th>Выручка</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td>{{.SalonID}}</td>
+        <td>{{if .SalonName}}{{.SalonName}}{{else}}<span class="muted">Без названия</span>{{end}}</td>
+        <td>{{.Address}}</td>
+        <td>{{.ClientCount}}</td>
+        <td>{{.ServiceCount}}</td>
+        <td>{{formatMoney .TotalRevenue}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

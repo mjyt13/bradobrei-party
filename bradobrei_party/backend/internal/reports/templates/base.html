@@ -1,0 +1,40 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{.Meta.Title}}</title>
+  <link rel="stylesheet" href="report.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="report-header">
+      <div>
+        <p class="eyebrow">{{.Meta.ReportCode}}</p>
+        <h1>{{.Meta.Title}}</h1>
+        {{if .Meta.Subtitle}}
+        <p class="subtitle">{{.Meta.Subtitle}}</p>
+        {{end}}
+      </div>
+      <div class="meta-card">
+        <p><span>Период</span><strong>{{safePeriod .Meta.PeriodFrom .Meta.PeriodTo}}</strong></p>
+        <p><span>Сформирован</span><strong>{{formatDateTime .Meta.GeneratedAt}}</strong></p>
+        {{if .Meta.GeneratedBy}}
+        <p><span>Автор</span><strong>{{.Meta.GeneratedBy}}</strong></p>
+        {{end}}
+        {{if .Meta.Organization}}
+        <p><span>Организация</span><strong>{{.Meta.Organization}}</strong></p>
+        {{end}}
+      </div>
+    </header>
+
+    {{template "content" .}}
+
+    <footer class="report-footer">
+      <p>Документ сформирован автоматически системой Bradobrei Party.</p>
+    </footer>
+  </main>
+</body>
+</html>
+{{end}}

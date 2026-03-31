@@ -224,3 +224,75 @@ type Review struct {
 
 	User User `json:"user,omitempty"`
 }
+
+// ReportMeta описывает служебные метаданные экспортируемого отчёта.
+// Эти поля не относятся к ORM-таблицам: они нужны для HTML/PDF-представления,
+// когда один и тот же набор данных оформляется как печатный документ.
+type ReportMeta struct {
+	ReportCode   string     `json:"report_code"`
+	Title        string     `json:"title"`
+	Subtitle     string     `json:"subtitle,omitempty"`
+	GeneratedAt  time.Time  `json:"generated_at"`
+	PeriodFrom   *time.Time `json:"period_from,omitempty"`
+	PeriodTo     *time.Time `json:"period_to,omitempty"`
+	GeneratedBy  string     `json:"generated_by,omitempty"`
+	Organization string     `json:"organization,omitempty"`
+}
+
+// EmployeeRegistryReportDocument — представление отчёта 2.2.1 для HTML/PDF.
+type EmployeeRegistryReportDocument struct {
+	Meta ReportMeta                  `json:"meta"`
+	Rows []EmployeeRegistryReportRow `json:"rows"`
+}
+
+type EmployeeRegistryReportRow struct {
+	FullName       string   `json:"full_name"`
+	Role           UserRole `json:"role"`
+	Phone          string   `json:"phone"`
+	Email          string   `json:"email,omitempty"`
+	Specialization string   `json:"specialization,omitempty"`
+	Salons         []string `json:"salons,omitempty"`
+	ExpectedSalary float64  `json:"expected_salary"`
+}
+
+// SalonActivityReportDocument — представление отчёта 2.2.2 для HTML/PDF.
+type SalonActivityReportDocument struct {
+	Meta ReportMeta                `json:"meta"`
+	Rows []SalonActivityReportRow  `json:"rows"`
+}
+
+type SalonActivityReportRow struct {
+	SalonID      uint    `json:"salon_id"`
+	SalonName    string  `json:"salon_name,omitempty"`
+	Address      string  `json:"address"`
+	ClientCount  int64   `json:"client_count"`
+	ServiceCount int64   `json:"service_count"`
+	TotalRevenue float64 `json:"total_revenue"`
+}
+
+// MasterActivityReportDocument — представление отчёта 2.2.4 для HTML/PDF.
+type MasterActivityReportDocument struct {
+	Meta ReportMeta                 `json:"meta"`
+	Rows []MasterActivityReportRow  `json:"rows"`
+}
+
+type MasterActivityReportRow struct {
+	MasterID     uint    `json:"master_id"`
+	FullName     string  `json:"full_name"`
+	ServiceCount int64   `json:"service_count"`
+	Revenue      float64 `json:"revenue"`
+	MaterialCost float64 `json:"material_cost"`
+}
+
+// ReviewsReportDocument — представление отчёта 2.2.5 для HTML/PDF.
+type ReviewsReportDocument struct {
+	Meta ReportMeta           `json:"meta"`
+	Rows []ReviewsReportRow   `json:"rows"`
+}
+
+type ReviewsReportRow struct {
+	Author    string    `json:"author"`
+	Rating    int       `json:"rating"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"created_at"`
+}

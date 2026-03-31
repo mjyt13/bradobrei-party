@@ -1,0 +1,46 @@
+{{define "content"}}
+<section class="report-section">
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>Сотрудников</span>
+      <strong>{{len .Rows}}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Отчёт</span>
+      <strong>Реестр персонала</strong>
+    </article>
+    <article class="summary-card">
+      <span>Период</span>
+      <strong>{{safePeriod .Meta.PeriodFrom .Meta.PeriodTo}}</strong>
+    </article>
+  </div>
+
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>ФИО</th>
+        <th>Роль</th>
+        <th>Контакты</th>
+        <th>Специализация</th>
+        <th>Салоны</th>
+        <th>Оклад</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td>{{.FullName}}</td>
+        <td>{{.Role}}</td>
+        <td>
+          <div>{{.Phone}}</div>
+          {{if .Email}}<div class="muted">{{.Email}}</div>{{end}}
+        </td>
+        <td>{{if .Specialization}}{{.Specialization}}{{else}}<span class="muted">Не указана</span>{{end}}</td>
+        <td>{{if .Salons}}{{join .Salons ", "}}{{else}}<span class="muted">Не закреплён</span>{{end}}</td>
+        <td>{{formatMoney .ExpectedSalary}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

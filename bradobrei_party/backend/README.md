@@ -4,75 +4,100 @@
 
 ## Что уже есть
 
-- REST API для пользователей, сотрудников, салонов, услуг, материалов, бронирований, отзывов и отчётов.
+- REST API для пользователей, сотрудников, салонов, услуг, материалов, бронирований, отзывов, платежей и отчётов.
+- Swagger UI для локальной разработки.
+- JWT-аутентификация с поддержкой `Bearer <token>` и raw JWT в dev-сценариях.
 - Автомиграция таблиц через GORM.
-- Подключённый Swagger UI.
-- JWT-аутентификация с `Bearer` токеном.
 - Подготовка под PostGIS: `salons.location` хранится как `geometry(Point,4326)`.
+- E2E и unit-тесты backend-слоя.
+- Базовая инфраструктура для HTML/PDF-отчётов через `internal/reports` и Gotenberg.
 
 ## Структура
 
-- `cmd/api/main.go` - точка входа, настройка БД, роутов, Swagger и middleware.
-- `internal/models` - ORM-модели GORM.
-- `internal/dto` - DTO запросов и ответов.
-- `internal/handlers` - HTTP-эндпоинты.
-- `internal/services` - прикладная логика.
-- `internal/repository` - доступ к данным.
-- `migrations` - SQL-миграции расширений и индексов.
-- `docs` - сгенерированная Swagger-документация.
+- `cmd/api/main.go` — точка входа API.
+- `cmd/report_example/main.go` — demo-команда для рендера HTML/PDF отчёта без HTTP endpoint.
+- `internal/models` — ORM-модели и report view-models для печатных документов.
+- `internal/dto` — DTO запросов и ответов.
+- `internal/handlers` — HTTP-обработчики.
+- `internal/services` — прикладная логика.
+- `internal/repository` — доступ к данным.
+- `internal/reports` — HTML-шаблоны отчётов, CSS и клиент Gotenberg.
+- `tests` — e2e/integration тесты через HTTP и PostgreSQL.
+- `test_artifacts` — сохранённые JSON-артефакты ответов.
+- `docs` — сгенерированная Swagger-документация.
 
 ## Отчёты 2.2.x из ТЗ
 
 - `2.2.1 Реестр персонала`
   - `GET /api/v1/reports/employees`
-  - `internal/handlers/report_handler.go`
-  - `internal/repository/report_repo.go`
+  - HTML/PDF модель: `models.EmployeeRegistryReportDocument`
+  - шаблон: `internal/reports/templates/employees.html`
 
 - `2.2.2 Аналитический отчёт об операционной активности филиалов`
   - `GET /api/v1/reports/salon-activity`
-  - основа данных также формируется через `POST /api/v1/bookings`
+  - HTML/PDF модель: `models.SalonActivityReportDocument`
+  - шаблон: `internal/reports/templates/salon_activity.html`
 
 - `2.2.3 Статистика востребованности услуг`
   - `GET /api/v1/reports/service-popularity`
+  - endpoint готов, PDF-шаблон можно добавить по той же схеме позднее
 
 - `2.2.4 Отчёт о производительности и ресурсо-затратности мастеров`
   - `GET /api/v1/reports/master-activity`
-  - рабочие данные для отчёта также участвуют в `GET /api/v1/bookings/master`
+  - HTML/PDF модель: `models.MasterActivityReportDocument`
+  - шаблон: `internal/reports/templates/master_activity.html`
 
 - `2.2.5 Журнал мониторинга качества обслуживания и обратной связи`
   - `GET /api/v1/reports/reviews`
   - `POST /api/v1/reviews`
-
-- `2.2.6 Ведомость движения ТМЦ`
-  - пока подготовлена модельная база: `Inventory`, `Material`, `ServiceMaterial`
-
-- `2.2.7 Анализ клиентской лояльности и удержания`
-  - пока подготовлена база на уровне модели `Booking`
-
-- `2.2.8 Реестр отменённых и нереализованных бронирований`
-  - пока подготовлена база на уровне `Booking.Status`
-
-- `2.2.9 Сводный финансовый отчёт по статьям издержек`
-  - пока не реализован
+  - HTML/PDF модель: `models.ReviewsReportDocument`
+  - шаблон: `internal/reports/templates/reviews.html`
 
 ## Зависимости
 
-Swagger-зависимости уже зафиксированы в `go.mod`, поэтому отдельно делать `go get github.com/swaggo/...` не нужно.
+Основные Go-зависимости уже зафиксированы в `go.mod`.
 
-Чтобы скачать зависимости проекта:
+Скачать зависимости:
 
 ```bash
 go mod download
 ```
 
-CLI `swag` нужен только если вы хотите заново сгенерировать папку `docs` после изменения аннотаций:
+Если нужно пересобрать Swagger:
 
 ```bash
 go install github.com/swaggo/swag/cmd/swag@latest
 swag init -g ./cmd/api/main.go -o ./docs
 ```
 
-## Настройка БД
+## Настройка окружения
+
+Минимальные переменные лежат в `backend/.env`.
+
+Важно:
+
+- `DB_*` — подключение к PostgreSQL/PostGIS
+- `PORT` — порт API
+- `JWT_SECRET` — ключ подписи JWT
+- `GOTENBERG_URL` — адрес сервиса Gotenberg для генерации PDF
+
+Пример:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=secret
+DB_NAME=bradobrei
+DB_SSLMODE=disable
+
+GIN_MODE=debug
+PORT=9000
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+GOTENBERG_URL=http://localhost:3000
+```
+
+## База данных
 
 Используется PostgreSQL с PostGIS.
 
@@ -82,16 +107,16 @@ swag init -g ./cmd/api/main.go -o ./docs
 CREATE DATABASE bradobrei;
 ```
 
-Приложение при старте само пытается выполнить:
+При старте приложение само пытается выполнить:
 
 ```sql
 CREATE SCHEMA IF NOT EXISTS public;
 CREATE EXTENSION IF NOT EXISTS postgis;
 ```
 
-Если база создавалась вручную и прав у пользователя недостаточно, выполните эти команды вручную под пользователем с нужными правами.
+Если база создана вручную и у пользователя не хватает прав, эти команды нужно выполнить отдельно под пользователем с нужными привилегиями.
 
-## Локальный запуск
+## Локальный запуск API
 
 Из папки `backend`:
 
@@ -99,10 +124,10 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 go run ./cmd/api
 ```
 
-По умолчанию сервер поднимается на:
+Сборка бинарника:
 
-```text
-http://localhost:8080
+```bash
+go build -o bradobrei-api ./cmd/api
 ```
 
 ## Swagger UI
@@ -110,66 +135,143 @@ http://localhost:8080
 Документация доступна по адресам:
 
 ```text
-http://localhost:8080/swagger/index.html
-http://localhost:8080/docs
+http://localhost:9000/swagger/index.html
+http://localhost:9000/docs
 ```
 
-Для защищённых эндпоинтов:
+Для защищённых endpoint:
 
-1. Выполните `POST /api/v1/auth/login`.
-2. Скопируйте токен из ответа.
-3. Нажмите кнопку `Authorize` в Swagger UI.
-4. Вставьте значение в формате:
+1. Выполните `POST /api/v1/auth/login`
+2. Скопируйте токен
+3. Нажмите `Authorize`
+4. Вставьте:
 
 ```text
 Bearer <ваш_jwt_токен>
 ```
 
-После этого Swagger будет автоматически подставлять заголовок `Authorization` в защищённые запросы.
+## Тесты
 
-## Примеры DTO в Swagger
-
-Примеры для полей DTO задаются прямо в Go-тегах структуры:
-
-```go
-type LoginRequest struct {
-    Username string `json:"username" binding:"required" example:"admin"`
-    Password string `json:"password" binding:"required" example:"password"`
-}
-```
-
-После изменения тегов нужно перегенерировать Swagger:
+### Быстрые unit-тесты
 
 ```bash
-swag init -g ./cmd/api/main.go -o ./docs
+go test ./internal/...
 ```
 
-Это удобно для локальной разработки:
-
-- можно быстро логиниться тестовым пользователем через Swagger
-- можно не собирать JSON вручную для `register`, `login`, `bookings`
-- примеры сразу видны в schema и request body
-
-Если у вас нет заранее созданного пользователя, сначала используйте `POST /api/v1/auth/register`, затем `POST /api/v1/auth/login`, затем `Authorize`.
-
-## Сборка
-
-Из папки `backend`:
+### E2E и интеграционные тесты
 
 ```bash
-go build -o bradobrei-api ./cmd/api
+go test ./tests -v -timeout 60s
 ```
 
-Запуск собранного бинарника:
+### Весь backend
 
 ```bash
-./bradobrei-api
+go test ./... -v -timeout 90s
 ```
 
-Для Git Bash в Windows:
+Что уже покрыто:
+
+- auth
+- employees
+- salons
+- bookings
+- payments
+- reviews
+- reports
+- helper-функции middleware, report parsing, coordinates normalization, salon IDs normalization
+
+Артефакты успешных сценариев сохраняются в:
+
+```text
+backend/test_artifacts/api_outputs.json
+```
+
+## Gotenberg
+
+Для генерации PDF используется отдельный контейнер Gotenberg. Основной `docker-compose.yml` при этом не меняется.
+
+Отдельный compose-файл для локальной разработки:
+
+```text
+docker-compose.gotenberg.yml
+```
+
+Запуск из корня репозитория:
 
 ```bash
-./bradobrei-api.exe
+docker compose -f docker-compose.gotenberg.yml up -d
+```
+
+Остановка:
+
+```bash
+docker compose -f docker-compose.gotenberg.yml down
+```
+
+В dev-режиме сервис будет доступен на:
+
+```text
+http://localhost:3000
+```
+
+Важно:
+
+- backend отправляет в Gotenberg `index.html` и дополнительные assets, например `report.css`
+- Gotenberg складывает все загруженные файлы в одну плоскую директорию
+- в HTML нужно ссылаться на asset по имени файла, например `report.css`, без подпапок
+
+Официальная документация Gotenberg:
+
+- Installation: https://gotenberg.dev/docs/getting-started/installation
+- HTML to PDF: https://gotenberg.dev/docs/convert-with-chromium/convert-html-to-pdf
+
+## `internal/reports`
+
+Папка `internal/reports` отвечает за:
+
+- HTML-шаблоны печатных форм
+- CSS для печатного документа
+- клиент к Gotenberg
+- рендер HTML в `[]byte`
+- рендер HTML -> PDF в `[]byte`
+
+Сейчас там уже есть:
+
+- `client.go` — Go-клиент для Gotenberg
+- `renderer.go` — рендерер HTML/PDF
+- `templates/base.html` — базовый layout
+- `templates/report.css` — общие стили печатного документа
+- `templates/employees.html`
+- `templates/salon_activity.html`
+- `templates/master_activity.html`
+- `templates/reviews.html`
+
+## Пример HTML/PDF без endpoint
+
+Для проверки шаблона без подключения отдельного API endpoint есть demo-команда:
+
+```bash
+go run ./cmd/report_example
+```
+
+Она:
+
+- собирает пример отчёта `2.2.1`
+- сохраняет HTML в `test_artifacts/employees_report_example.html`
+- пытается получить PDF через Gotenberg и сохранить его в `test_artifacts/employees_report_example.pdf`
+
+Если нужно только HTML:
+
+```bash
+go run ./cmd/report_example --skip-pdf
+```
+
+Если Gotenberg уже поднят:
+
+```bash
+docker compose -f ../docker-compose.gotenberg.yml up -d
+go run ./cmd/report_example
 ```
 
 ## Полезные команды
@@ -177,7 +279,7 @@ go build -o bradobrei-api ./cmd/api
 Форматирование:
 
 ```bash
-gofmt -w ./cmd ./internal
+gofmt -w ./cmd ./internal ./tests
 ```
 
 Проверка сборки:
@@ -186,19 +288,13 @@ gofmt -w ./cmd ./internal
 go build ./...
 ```
 
-Перегенерация Swagger:
-
-```bash
-swag init -g ./cmd/api/main.go -o ./docs
-```
-
 ## Частые проблемы
 
 ### `schema for creating objects is not selected` / `SQLSTATE 3F000`
 
-Обычно это значит одно из трёх:
+Обычно это значит:
 
-- база пересоздана вручную и в ней нет схемы `public`
+- в БД нет схемы `public`
 - у пользователя БД пустой `search_path`
 - `.env` указывает не на тот экземпляр PostgreSQL
 
@@ -212,12 +308,20 @@ swag init -g ./cmd/api/main.go -o ./docs
 CREATE EXTENSION IF NOT EXISTS postgis;
 ```
 
-### Почему `go build` на Windows иногда падает, а `go run` идёт дальше
+### `go build` на Windows падает из-за кеша
 
-Иногда мешает доступ к кэшу Go в `%LOCALAPPDATA%\\go-build`.
+Иногда мешает `%LOCALAPPDATA%\\go-build`.
 
 Попробуйте:
 
 ```bash
 go clean -cache
+```
+
+или локальный кеш:
+
+```powershell
+New-Item -ItemType Directory -Force '.gocache' | Out-Null
+$env:GOCACHE=(Resolve-Path '.gocache')
+go test ./... -v -timeout 90s
 ```
