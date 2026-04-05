@@ -11,6 +11,7 @@ import (
 	"time"
 
 	docs "bradobrei/backend/docs"
+	"bradobrei/backend/internal/geocoder"
 	"bradobrei/backend/internal/handlers"
 	"bradobrei/backend/internal/middleware"
 	"bradobrei/backend/internal/models"
@@ -92,13 +93,17 @@ func main() {
 
 	authSvc := services.NewAuthService(userRepo)
 	bookingSvc := services.NewBookingService(bookingRepo, invRepo, db)
-	salonSvc := services.NewSalonService(salonRepo)
+	geoCoder, err := geocoder.NewFromEnv()
+	if err != nil {
+		log.Fatal("геокодер: ", err)
+	}
+	salonSvc := services.NewSalonService(salonRepo, geoCoder)
 	reportSvc := services.NewReportService(reportRepo)
 	serviceSvc := services.NewServiceService(serviceRepo, employeeRepo, invRepo, db)
 	materialSvc := services.NewMaterialService(materialRepo)
 	materialExpenseSvc := services.NewMaterialExpenseService(db)
 	inventorySvc := services.NewInventoryService(invRepo)
-	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo)
+	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo, db)
 	paymentSvc := services.NewPaymentService(paymentRepo, bookingRepo)
 
 	authH := handlers.NewAuthHandler(authSvc)
@@ -160,6 +165,7 @@ func main() {
 
 		salons := api.Group("/salons")
 		{
+			salons.POST("/geocode", middleware.RequireRoles(models.RoleAdmin, models.RoleNetworkManager), salonH.GeocodeAddress)
 			salons.GET("", salonH.GetAll)
 			salons.GET("/:id", salonH.GetByID)
 			salons.GET("/:id/masters", salonH.GetMasters)

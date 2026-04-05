@@ -28,6 +28,18 @@ const initialForm: CreateBookingRequestDto = {
   notes: '',
 }
 
+/** Значение `datetime-local` (YYYY-MM-DDTHH:mm) → RFC3339 UTC, как ждёт `time.Parse(RFC3339)` на backend. */
+function datetimeLocalToRFC3339(value: string): string {
+  if (!value) {
+    return ''
+  }
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) {
+    return ''
+  }
+  return d.toISOString().replace(/\.\d{3}Z$/, 'Z')
+}
+
 function getDefaultScope(role?: string): BookingScope {
   if (role === 'CLIENT') {
     return 'my'
@@ -186,9 +198,23 @@ export function BookingsPage() {
     setError('')
     setMessage('')
 
+    if (form.service_ids.length === 0) {
+      setError('Выберите хотя бы одну услугу — без этого бронирование не создаётся.')
+      setSubmitting(false)
+      return
+    }
+
     try {
+      const startRFC3339 = datetimeLocalToRFC3339(form.start_time)
+      if (!startRFC3339) {
+        setError('Укажите корректную дату и время визита.')
+        setSubmitting(false)
+        return
+      }
+
       const payload: CreateBookingRequestDto = {
         ...form,
+        start_time: startRFC3339,
         salon_id: Number(form.salon_id),
         master_id: form.master_id ? Number(form.master_id) : undefined,
         service_ids: form.service_ids.map(Number),
@@ -248,6 +274,7 @@ export function BookingsPage() {
             onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
             required
           />
+          <small className="field-hint">Время вашего браузера; на сервер уходит в формате RFC3339 (UTC).</small>
         </label>
         <label className="field">
           <span>Салон</span>
@@ -288,34 +315,44 @@ export function BookingsPage() {
           <textarea rows={3} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Например: важна работа с бородой и усами." />
         </label>
         <div className="field field-wide">
-          <span>Услуги</span>
-          <div className="checkbox-grid">
-            {services.map((service) => {
-              const isChecked = form.service_ids.includes(service.id)
-              return (
-                <label key={service.id} className="checkbox-card">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        service_ids: event.target.checked
-                          ? [...current.service_ids, service.id]
-                          : current.service_ids.filter((serviceId) => serviceId !== service.id),
-                      }))
-                    }
-                  />
-                  <span>
-                    <strong>{service.name}</strong>
-                    <small>{formatCurrency(service.price)} • {service.duration_minutes} мин.</small>
-                  </span>
-                </label>
-              )
-            })}
-          </div>
+          <span>Услуги (обязательно — минимум одна)</span>
+          {services.length === 0 ? (
+            <p className="section-description field-hint">
+              В справочнике нет услуг. Создайте услуги на странице «Услуги», затем обновите эту страницу.
+            </p>
+          ) : (
+            <div className="checkbox-grid">
+              {services.map((service) => {
+                const isChecked = form.service_ids.includes(service.id)
+                return (
+                  <label key={service.id} className="checkbox-card">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          service_ids: event.target.checked
+                            ? [...current.service_ids, service.id]
+                            : current.service_ids.filter((serviceId) => serviceId !== service.id),
+                        }))
+                      }
+                    />
+                    <span>
+                      <strong>{service.name}</strong>
+                      <small>{formatCurrency(service.price)} • {service.duration_minutes} мин.</small>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
         </div>
-        <button type="submit" className="primary-button field-wide" disabled={submitting}>
+        <button
+          type="submit"
+          className="primary-button field-wide"
+          disabled={submitting || services.length === 0}
+        >
           {submitting ? 'Создаём бронирование...' : 'Создать бронирование'}
         </button>
       </form>

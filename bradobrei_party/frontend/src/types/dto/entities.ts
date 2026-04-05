@@ -47,6 +47,9 @@ export interface EmployeeProfileSummaryDto {
 }
 
 export interface SalonDto extends SalonBriefDto {
+  /** Широта/долгота для карты в SPA (вычисляются на backend из PostGIS). */
+  latitude?: number
+  longitude?: number
   location?: string
   working_hours?: string
   status: SalonStatus
@@ -93,6 +96,13 @@ export interface BookingDto {
   salon?: SalonDto
   items?: BookingItemDto[]
   payment?: PaymentDto
+}
+
+export interface GeocodeAddressResponseDto {
+  latitude: number
+  longitude: number
+  formatted_address: string
+  provider: string
 }
 
 export interface UpsertSalonRequestDto {

@@ -26,7 +26,7 @@ export function AuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const redirectTo = (location.state as { from?: string } | null)?.from || '/reports/employees'
+  const redirectTo = (location.state as { from?: string } | null)?.from || '/reports'
 
   async function handleLoginSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -91,10 +91,31 @@ export function AuthPage() {
         </div>
       </section>
 
-      <section className="auth-panel">
-        <div className="tab-row">
+      <section className="auth-panel auth-form-panel">
+        <div className="auth-form-head-stack">
+          <div
+            className={`auth-form-pane ${mode === 'login' ? 'auth-form-pane-active' : ''}`}
+            aria-hidden={mode !== 'login'}
+          >
+            <h2>Вход в систему</h2>
+            <p>Отчёты и операции после авторизации.</p>
+          </div>
+          <div
+            className={`auth-form-pane ${mode === 'register' ? 'auth-form-pane-active' : ''}`}
+            aria-hidden={mode !== 'register'}
+          >
+            <h2>Регистрация</h2>
+            <p>Заполните данные для новой учётной записи.</p>
+          </div>
+        </div>
+
+        <div className="tab-row tab-row-auth" role="tablist" aria-label="Режим авторизации">
+          <span className="tab-row-slider" aria-hidden data-position={mode} />
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'login'}
+            id="auth-tab-login"
             className={mode === 'login' ? 'tab-button tab-button-active' : 'tab-button'}
             onClick={() => setMode('login')}
           >
@@ -102,6 +123,9 @@ export function AuthPage() {
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'register'}
+            id="auth-tab-register"
             className={mode === 'register' ? 'tab-button tab-button-active' : 'tab-button'}
             onClick={() => setMode('register')}
           >
@@ -112,8 +136,14 @@ export function AuthPage() {
         {message ? <div className="alert alert-success">{message}</div> : null}
         {error ? <div className="alert alert-error">{error}</div> : null}
 
-        {mode === 'login' ? (
-          <form className="stack-form" onSubmit={handleLoginSubmit}>
+        <div className="auth-form-stack">
+          <form
+            className={`stack-form auth-form-pane ${mode === 'login' ? 'auth-form-pane-active' : ''}`}
+            onSubmit={handleLoginSubmit}
+            aria-labelledby="auth-tab-login"
+            aria-hidden={mode !== 'login'}
+            inert={mode !== 'login' ? true : undefined}
+          >
             <label className="field">
               <span>Логин</span>
               <input
@@ -143,8 +173,14 @@ export function AuthPage() {
               {submitting ? 'Выполняем вход...' : 'Войти'}
             </button>
           </form>
-        ) : (
-          <form className="stack-form" onSubmit={handleRegisterSubmit}>
+
+          <form
+            className={`stack-form auth-form-pane ${mode === 'register' ? 'auth-form-pane-active' : ''}`}
+            onSubmit={handleRegisterSubmit}
+            aria-labelledby="auth-tab-register"
+            aria-hidden={mode !== 'register'}
+            inert={mode !== 'register' ? true : undefined}
+          >
             <label className="field">
               <span>Логин</span>
               <input
@@ -211,7 +247,7 @@ export function AuthPage() {
               {submitting ? 'Создаём пользователя...' : 'Зарегистрироваться'}
             </button>
           </form>
-        )}
+        </div>
       </section>
     </div>
   )

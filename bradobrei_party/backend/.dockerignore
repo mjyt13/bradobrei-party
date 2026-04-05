@@ -1,0 +1,5 @@
+.git
+.gocache
+test_artifacts
+scripts
+*.log

@@ -2,22 +2,28 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/repository"
+
+	"gorm.io/gorm"
 )
 
 type EmployeeService struct {
 	employeeRepo *repository.EmployeeRepository
 	userRepo     *repository.UserRepository
+	db           *gorm.DB
 }
 
 func NewEmployeeService(
 	employeeRepo *repository.EmployeeRepository,
 	userRepo *repository.UserRepository,
+	db *gorm.DB,
 ) *EmployeeService {
-	return &EmployeeService{employeeRepo: employeeRepo, userRepo: userRepo}
+	return &EmployeeService{employeeRepo: employeeRepo, userRepo: userRepo, db: db}
 }
 
 func (s *EmployeeService) GetAll() ([]models.EmployeeProfile, error) {
@@ -37,6 +43,20 @@ func (s *EmployeeService) HireEmployee(req dto.HireEmployeeRequest) (*models.Emp
 		return nil, errors.New("нельзя нанять пользователя с ролью CLIENT")
 	}
 
+	if _, err := s.userRepo.GetByUsername(req.Username); err == nil {
+		return nil, errors.New("пользователь с таким логином уже существует")
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	if req.Email != "" {
+		if _, err := s.userRepo.GetByEmail(req.Email); err == nil {
+			return nil, errors.New("пользователь с таким email уже зарегистрирован")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+	}
+
 	var emailPtr *string
 	if req.Email != "" {
 		emailPtr = &req.Email
@@ -51,33 +71,64 @@ func (s *EmployeeService) HireEmployee(req dto.HireEmployeeRequest) (*models.Emp
 		Role:         req.Role,
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
-		return nil, errors.New("не удалось создать пользователя: " + err.Error())
-	}
-
 	var schedulePtr *string
 	if req.WorkSchedule != "" {
 		schedulePtr = &req.WorkSchedule
 	}
 
 	profile := &models.EmployeeProfile{
-		UserID:         user.ID,
 		Specialization: req.Specialization,
 		ExpectedSalary: req.ExpectedSalary,
 		WorkSchedule:   schedulePtr,
 	}
 
-	if err := s.employeeRepo.Create(profile); err != nil {
-		return nil, errors.New("не удалось создать профиль: " + err.Error())
-	}
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		ur := repository.NewUserRepository(tx)
+		er := repository.NewEmployeeRepository(tx)
 
-	if req.SalonID > 0 {
-		if err := s.employeeRepo.AssignToSalon(profile.ID, req.SalonID); err != nil {
-			return nil, err
+		if err := ur.Create(user); err != nil {
+			return hireUserCreateError(err)
 		}
+
+		profile.UserID = user.ID
+		if err := er.Create(profile); err != nil {
+			return fmt.Errorf("не удалось создать профиль: %w", err)
+		}
+
+		if req.SalonID > 0 {
+			if err := er.AssignToSalon(profile.ID, req.SalonID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return s.employeeRepo.GetByID(profile.ID)
+}
+
+func hireUserCreateError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "email") {
+			return errors.New("пользователь с таким email уже зарегистрирован")
+		}
+		return errors.New("пользователь с таким логином уже существует")
+	}
+	s := err.Error()
+	if strings.Contains(s, "23505") {
+		low := strings.ToLower(s)
+		if strings.Contains(low, "email") || strings.Contains(s, "uni_users_email") {
+			return errors.New("пользователь с таким email уже зарегистрирован")
+		}
+		return errors.New("пользователь с таким логином уже существует")
+	}
+	return fmt.Errorf("не удалось создать пользователя: %w", err)
 }
 
 func (s *EmployeeService) UpdateSchedule(userID uint, schedule string) error {

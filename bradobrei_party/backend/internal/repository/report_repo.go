@@ -16,10 +16,12 @@ func NewReportRepository(db *gorm.DB) *ReportRepository {
 	return &ReportRepository{db: db}
 }
 
+// --- DTO для отчётов ---
+
 type EmployeeReportRow struct {
 	FullName       string  `json:"full_name"`
 	Specialization string  `json:"specialization"`
-	Salons         string  `json:"salons"`
+	Salons         string  `json:"salons"` // JSON-массив адресов
 	ExpectedSalary float64 `json:"expected_salary"`
 }
 
@@ -35,7 +37,7 @@ type ServicePopularityRow struct {
 	ServiceID    uint    `json:"service_id"`
 	ServiceName  string  `json:"service_name"`
 	UsageCount   int64   `json:"usage_count"`
-	RelativeFreq float64 `json:"relative_freq"`
+	RelativeFreq float64 `json:"relative_freq"` // доля от всех оказанных
 }
 
 type MasterActivityRow struct {
@@ -97,6 +99,7 @@ func (r *ReportRepository) GetEmployeeList() ([]models.User, error) {
 	return users, err
 }
 
+// Report 2.2.2 — Месячная активность сети
 func (r *ReportRepository) GetSalonActivity(from, to time.Time) ([]SalonActivityRow, error) {
 	var rows []SalonActivityRow
 	err := r.db.Raw(`
@@ -117,6 +120,7 @@ func (r *ReportRepository) GetSalonActivity(from, to time.Time) ([]SalonActivity
 	return rows, err
 }
 
+// Report 2.2.3 — Популярность услуг
 func (r *ReportRepository) GetServicePopularity(from, to time.Time) ([]ServicePopularityRow, error) {
 	var rows []ServicePopularityRow
 	err := r.db.Raw(`
@@ -147,6 +151,7 @@ func (r *ReportRepository) GetServicePopularity(from, to time.Time) ([]ServicePo
 	return rows, err
 }
 
+// Report 2.2.4 — Активность мастеров
 func (r *ReportRepository) GetMasterActivity(from, to time.Time) ([]MasterActivityRow, error) {
 	var rows []MasterActivityRow
 	err := r.db.Raw(`
@@ -169,6 +174,7 @@ func (r *ReportRepository) GetMasterActivity(from, to time.Time) ([]MasterActivi
 	return rows, err
 }
 
+// Report 2.2.5 — Отзывы об ИС
 func (r *ReportRepository) GetReviews(from, to time.Time) ([]models.Review, error) {
 	var reviews []models.Review
 	q := r.db.Preload("User")

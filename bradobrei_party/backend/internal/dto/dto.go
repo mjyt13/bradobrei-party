@@ -21,6 +21,19 @@ type UserResponse struct {
 	User models.User `json:"user"`
 }
 
+// GeocodeAddressRequest — серверный геокодинг адреса (секретный ключ провайдера только на backend).
+type GeocodeAddressRequest struct {
+	Address string `json:"address" binding:"required" example:"Екатеринбург, ул. Малышева, 12"`
+}
+
+// GeocodeAddressResponse — нормализованные координаты и строка адреса для карты в SPA.
+type GeocodeAddressResponse struct {
+	Latitude         float64 `json:"latitude" example:"56.838011"`
+	Longitude        float64 `json:"longitude" example:"60.597474"`
+	FormattedAddress string  `json:"formatted_address"`
+	Provider         string  `json:"provider" example:"yandex"`
+}
+
 type RegisterRequest struct {
 	Username string          `json:"username" binding:"required,min=3,max=50" example:"admin"`
 	Password string          `json:"password" binding:"required,min=6" example:"password"`

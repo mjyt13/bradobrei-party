@@ -184,7 +184,7 @@ export function EmployeesPage() {
         <p className="eyebrow">Кадровый контур</p>
         <h2>Управление сотрудниками</h2>
         <p className="section-description">
-          Здесь собраны операции сопровождения сотрудников: редактирование профилей, ролей, графика и закрепления за салонами.
+          Редактирование профилей, ролей, графика и закрепления за салонами; увольнение. Найм остаётся на отдельной странице.
         </p>
       </div>
 
@@ -195,7 +195,11 @@ export function EmployeesPage() {
         <form className="card-form card-form-grid" onSubmit={handleSubmit}>
           <label className="field">
             <span>Логин</span>
-            <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required />
+            <input
+              value={form.username}
+              onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
+              required
+            />
           </label>
           <label className="field">
             <span>Роль</span>
@@ -214,37 +218,74 @@ export function EmployeesPage() {
           </label>
           <label className="field field-wide">
             <span>ФИО</span>
-            <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required />
+            <input
+              value={form.full_name}
+              onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
+              required
+            />
           </label>
           <label className="field">
             <span>Телефон</span>
-            <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+            <input
+              value={form.phone}
+              onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+            />
           </label>
           <label className="field">
             <span>Email</span>
-            <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            />
           </label>
           <label className="field">
             <span>Оклад</span>
-            <input type="number" min="0" value={form.expected_salary} onChange={(event) => setForm((current) => ({ ...current, expected_salary: Number(event.target.value) }))} />
+            <input
+              type="number"
+              min="0"
+              value={form.expected_salary}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, expected_salary: Number(event.target.value) }))
+              }
+            />
           </label>
           <label className="field">
             <span>ID салонов через запятую</span>
-            <input value={salonIdsInput} onChange={(event) => setSalonIdsInput(event.target.value)} placeholder="1, 2" />
+            <input
+              value={salonIdsInput}
+              onChange={(event) => setSalonIdsInput(event.target.value)}
+              placeholder="1, 2"
+            />
           </label>
           <label className="field field-wide">
             <span>Специализация</span>
-            <input value={form.specialization} onChange={(event) => setForm((current) => ({ ...current, specialization: event.target.value }))} />
+            <input
+              value={form.specialization}
+              onChange={(event) => setForm((current) => ({ ...current, specialization: event.target.value }))}
+            />
           </label>
           <label className="field field-wide">
             <span>График JSON</span>
-            <textarea rows={4} value={form.work_schedule} onChange={(event) => setForm((current) => ({ ...current, work_schedule: event.target.value }))} />
+            <textarea
+              rows={4}
+              value={form.work_schedule}
+              onChange={(event) => setForm((current) => ({ ...current, work_schedule: event.target.value }))}
+            />
           </label>
           <div className="button-row field-wide">
             <button type="submit" className="primary-button" disabled={submitting}>
               {submitting ? 'Сохраняем...' : 'Сохранить изменения'}
             </button>
-            <button type="button" className="ghost-button" onClick={() => { setEditingEmployee(null); setForm(initialForm); setSalonIdsInput('') }}>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                setEditingEmployee(null)
+                setForm(initialForm)
+                setSalonIdsInput('')
+              }}
+            >
               Отменить
             </button>
           </div>

@@ -1,20 +1,47 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"bradobrei/backend/internal/dto"
+	"bradobrei/backend/internal/geocoder"
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/repository"
 )
 
 type SalonService struct {
 	salonRepo *repository.SalonRepository
+	geocoder  geocoder.Geocoder
 }
 
-func NewSalonService(salonRepo *repository.SalonRepository) *SalonService {
-	return &SalonService{salonRepo: salonRepo}
+func NewSalonService(salonRepo *repository.SalonRepository, g geocoder.Geocoder) *SalonService {
+	return &SalonService{salonRepo: salonRepo, geocoder: g}
+}
+
+// GeocoderEnabled — true, если настроен серверный геокодер (ключи не в браузере).
+func (s *SalonService) GeocoderEnabled() bool {
+	return s.geocoder != nil
+}
+
+// GeocodeAddress вызывает внешний Geocoder API на сервере (Salon Service / валидация адреса).
+func (s *SalonService) GeocodeAddress(ctx context.Context, address string) (dto.GeocodeAddressResponse, error) {
+	var out dto.GeocodeAddressResponse
+	if s.geocoder == nil {
+		return out, fmt.Errorf("геокодер не настроен")
+	}
+	res, err := s.geocoder.Geocode(ctx, strings.TrimSpace(address))
+	if err != nil {
+		return out, err
+	}
+	out.Latitude = res.Lat
+	out.Longitude = res.Lon
+	out.FormattedAddress = res.FormattedAddress
+	out.Provider = s.geocoder.Provider()
+	return out, nil
 }
 
 func (s *SalonService) GetAll() ([]models.Salon, error) {
@@ -26,17 +53,52 @@ func (s *SalonService) GetByID(id uint) (*models.Salon, error) {
 }
 
 func (s *SalonService) Create(salon *models.Salon) error {
-	if err := normalizeSalonLocation(salon); err != nil {
+	ctx := context.Background()
+	if err := s.applyServerGeocoding(ctx, salon); err != nil {
 		return err
+	}
+	if err := normalizeSalonWorkingHours(salon); err != nil {
+		return err
+	}
+	if s.geocoder == nil {
+		if err := normalizeSalonLocation(salon); err != nil {
+			return err
+		}
 	}
 	return s.salonRepo.Create(salon)
 }
 
 func (s *SalonService) Update(salon *models.Salon) error {
-	if err := normalizeSalonLocation(salon); err != nil {
+	ctx := context.Background()
+	if err := s.applyServerGeocoding(ctx, salon); err != nil {
 		return err
 	}
+	if err := normalizeSalonWorkingHours(salon); err != nil {
+		return err
+	}
+	if s.geocoder == nil {
+		if err := normalizeSalonLocation(salon); err != nil {
+			return err
+		}
+	}
 	return s.salonRepo.Update(salon)
+}
+
+func (s *SalonService) applyServerGeocoding(ctx context.Context, salon *models.Salon) error {
+	if s.geocoder == nil {
+		return nil
+	}
+	addr := strings.TrimSpace(salon.Address)
+	if addr == "" {
+		return fmt.Errorf("укажите адрес салона для проверки геокодером")
+	}
+	res, err := s.geocoder.Geocode(ctx, addr)
+	if err != nil {
+		return fmt.Errorf("геокодирование адреса: %w", err)
+	}
+	wkt := fmt.Sprintf("POINT(%g %g)", res.Lon, res.Lat)
+	salon.Location = &wkt
+	return nil
 }
 
 func (s *SalonService) Delete(id uint) error {
@@ -64,6 +126,32 @@ func normalizeSalonLocation(salon *models.Salon) error {
 	}
 
 	salon.Location = &normalized
+	return nil
+}
+
+func normalizeSalonWorkingHours(salon *models.Salon) error {
+	if salon.WorkingHours == nil {
+		return nil
+	}
+
+	raw := strings.TrimSpace(*salon.WorkingHours)
+	if raw == "" {
+		salon.WorkingHours = nil
+		return nil
+	}
+
+	var hours map[string]string
+	if err := json.Unmarshal([]byte(raw), &hours); err != nil {
+		return fmt.Errorf("working_hours должен быть корректным JSON-объектом вида {\"mon\":\"10:00-20:00\"}")
+	}
+
+	normalized, err := json.Marshal(hours)
+	if err != nil {
+		return fmt.Errorf("не удалось нормализовать working_hours")
+	}
+
+	value := string(normalized)
+	salon.WorkingHours = &value
 	return nil
 }
 

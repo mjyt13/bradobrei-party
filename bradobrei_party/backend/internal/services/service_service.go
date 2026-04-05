@@ -10,23 +10,21 @@ import (
 )
 
 type ServiceService struct {
-	serviceRepo   *repository.ServiceRepository
-	employeeRepo  *repository.EmployeeRepository
-	inventoryRepo *repository.InventoryRepository
-	db            *gorm.DB
+	serviceRepo  *repository.ServiceRepository
+	employeeRepo *repository.EmployeeRepository
+	db           *gorm.DB
 }
 
 func NewServiceService(
 	serviceRepo *repository.ServiceRepository,
 	employeeRepo *repository.EmployeeRepository,
-	inventoryRepo *repository.InventoryRepository,
+	_ *repository.InventoryRepository,
 	db *gorm.DB,
 ) *ServiceService {
 	return &ServiceService{
-		serviceRepo:   serviceRepo,
-		employeeRepo:  employeeRepo,
-		inventoryRepo: inventoryRepo,
-		db:            db,
+		serviceRepo:  serviceRepo,
+		employeeRepo: employeeRepo,
+		db:           db,
 	}
 }
 

@@ -109,7 +109,7 @@ export function MaterialsPage() {
         <p className="eyebrow">Склад и расход</p>
         <h2>Материалы</h2>
         <p className="section-description">
-          Справочник материалов нужен для каталога расходников и последующей привязки норм расхода к услугам.
+          Справочник материалов для пополнения каталога расходников и привязки норм расхода к услугам.
         </p>
       </div>
 
@@ -136,7 +136,14 @@ export function MaterialsPage() {
             {submitting ? 'Сохраняем...' : editingId ? 'Обновить материал' : 'Создать материал'}
           </button>
           {editingId ? (
-            <button type="button" className="ghost-button" onClick={() => { setEditingId(null); setForm(initialForm) }}>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                setEditingId(null)
+                setForm(initialForm)
+              }}
+            >
               Сбросить редактирование
             </button>
           ) : null}

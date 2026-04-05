@@ -5,7 +5,7 @@ type EnvMap = Record<string, string>
 export function createViteProxy(env: EnvMap): Record<string, ProxyOptions> {
   const apiScheme = env.VITE_API_SCHEME || 'http'
   const apiHost = env.VITE_API_HOST || 'localhost'
-  const apiPort = env.VITE_API_PORT || '9000'
+  const apiPort = env.VITE_API_PORT || '8080'
   const proxyTarget = `${apiScheme}://${apiHost}:${apiPort}`
 
   return {

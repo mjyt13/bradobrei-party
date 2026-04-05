@@ -36,6 +36,15 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	err := r.db.Preload("EmployeeProfile").Find(&users).Error

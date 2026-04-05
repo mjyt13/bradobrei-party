@@ -94,6 +94,9 @@ type Salon struct {
 	Name           string    `gorm:"not null;size:100"               json:"name"`
 	Address        string    `gorm:"not null"                        json:"address"`
 	Location       *string   `gorm:"type:geometry(POINT,4326)"      json:"location,omitempty"` // PostGIS, опционально
+	// Latitude/Longitude только для JSON (карта в SPA), не колонки БД.
+	Latitude  *float64 `json:"latitude,omitempty"  gorm:"-"`
+	Longitude *float64 `json:"longitude,omitempty" gorm:"-"`
 	WorkingHours   *string   `gorm:"type:jsonb"                      json:"working_hours,omitempty"`
 	Status         string    `gorm:"default:'OPEN'"                  json:"status"` // OPEN/CLOSED
 	MaxStaff       int       `                                       json:"max_staff"`

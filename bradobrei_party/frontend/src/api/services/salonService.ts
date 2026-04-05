@@ -1,6 +1,7 @@
 import { apiRequest } from '../client'
 import type {
   EmployeeProfileSummaryDto,
+  GeocodeAddressResponseDto,
   SalonDto,
   UpsertSalonRequestDto,
 } from '../../types/dto/entities'
@@ -30,6 +31,13 @@ export const salonService = {
   remove(id: number) {
     return apiRequest<{ message: string }>(`/salons/${id}`, {
       method: 'DELETE',
+    })
+  },
+  /** Серверный геокодер (секрет провайдера только на backend). */
+  geocodeAddress(address: string) {
+    return apiRequest<GeocodeAddressResponseDto>('/salons/geocode', {
+      method: 'POST',
+      body: { address },
     })
   },
 }
