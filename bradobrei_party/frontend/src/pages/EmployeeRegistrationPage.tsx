@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
 import { employeeService } from '../api/services/employeeService'
+import { salonService } from '../api/services/salonService'
+import { ScheduleEditor } from '../components/ScheduleEditor'
 import { employeeRoleOptions } from '../shared/options'
+import type { AppShellOutletContext } from '../types/appShell'
+import type { SalonDto } from '../types/dto/entities'
 
-const initialForm = {
+const baseInitialForm = {
   username: '',
   password: '',
   full_name: '',
@@ -12,14 +18,47 @@ const initialForm = {
   specialization: '',
   expected_salary: 65000,
   work_schedule: '{"mon":"10:00-19:00","wed":"10:00-19:00"}',
-  salon_id: 1,
 }
 
 export function EmployeeRegistrationPage() {
-  const [form, setForm] = useState(initialForm)
+  const { currentUser } = useOutletContext<AppShellOutletContext>()
+  const [salons, setSalons] = useState<SalonDto[]>([])
+  const [form, setForm] = useState({
+    ...baseInitialForm,
+    salon_id: 0,
+  })
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const hasSalonOptions = salons.length > 0
+
+  const selectedSalon = useMemo(
+    () => salons.find((salon) => salon.id === form.salon_id) || null,
+    [form.salon_id, salons],
+  )
+
+  useEffect(() => {
+    salonService
+      .getAll()
+      .then((response) => {
+        setSalons(response)
+        setForm((current) => ({
+          ...current,
+          salon_id: response[0]?.id || 0,
+        }))
+      })
+      .catch((requestError) => {
+        setError(getReadableErrorMessage(requestError, 'Не удалось загрузить список салонов.'))
+      })
+  }, [])
+
+  function resetForm() {
+    setForm({
+      ...baseInitialForm,
+      salon_id: salons[0]?.id || 0,
+    })
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -34,9 +73,9 @@ export function EmployeeRegistrationPage() {
         salon_id: Number(form.salon_id),
       })
       setMessage(`Сотрудник создан. Профиль #${response.id} готов к дальнейшей настройке.`)
-      setForm(initialForm)
+      resetForm()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось создать сотрудника.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось создать сотрудника.'))
     } finally {
       setSubmitting(false)
     }
@@ -49,8 +88,11 @@ export function EmployeeRegistrationPage() {
           <p className="eyebrow">Кадровый контур</p>
           <h2>Регистрация нового сотрудника</h2>
           <p className="section-description">
-            Форма использует DTO backend для `HireEmployeeRequest` и сразу готова
-            к работе в локальной разработке.
+            Форма использует DTO backend для `HireEmployeeRequest` и показывает салоны по названию
+            и ID, чтобы не выбирать филиал вслепую.
+          </p>
+          <p className="section-description">
+            Текущая роль: {currentUser?.role || 'не определена'}.
           </p>
         </div>
       </div>
@@ -144,23 +186,55 @@ export function EmployeeRegistrationPage() {
           />
         </label>
         <label className="field">
-          <span>ID салона</span>
-          <input
-            type="number"
-            min="1"
-            value={form.salon_id}
-            onChange={(event) => setForm((current) => ({ ...current, salon_id: Number(event.target.value) }))}
-          />
+          <span>Салон</span>
+          <select
+            value={form.salon_id || ''}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, salon_id: Number(event.target.value) }))
+            }
+            required
+            disabled={!hasSalonOptions}
+          >
+            {!hasSalonOptions ? <option value="">Салоны не загружены</option> : null}
+            {salons.map((salon) => (
+              <option key={salon.id} value={salon.id}>
+                #{salon.id} {salon.name}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="field field-wide">
-          <span>График в JSON</span>
-          <textarea
-            rows={5}
-            value={form.work_schedule}
-            onChange={(event) => setForm((current) => ({ ...current, work_schedule: event.target.value }))}
-          />
-        </label>
-        <button type="submit" className="primary-button field-wide" disabled={submitting}>
+
+        <ScheduleEditor
+          label="График работы"
+          value={form.work_schedule}
+          onChange={(nextValue) => setForm((current) => ({ ...current, work_schedule: nextValue }))}
+          hint="Оставьте день пустым, если мастер в этот день не работает."
+          placeholder="10:00-19:00"
+        />
+
+        <div className="field field-wide">
+          <span>Выбранный салон</span>
+          {selectedSalon ? (
+            <div className="checkbox-grid">
+              <label className="checkbox-card">
+                <input type="radio" checked readOnly />
+                <span>
+                  <strong>
+                    #{selectedSalon.id} {selectedSalon.name}
+                  </strong>
+                  <small>{selectedSalon.address}</small>
+                </span>
+              </label>
+            </div>
+          ) : (
+            <p className="section-description field-hint">Список салонов ещё не загружен.</p>
+          )}
+        </div>
+        <button
+          type="submit"
+          className="primary-button field-wide"
+          disabled={submitting || !hasSalonOptions}
+        >
           {submitting ? 'Создаём сотрудника...' : 'Создать сотрудника'}
         </button>
       </form>

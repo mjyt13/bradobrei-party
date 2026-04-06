@@ -1,5 +1,6 @@
 import { startTransition, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
 import { authService } from '../api/services/authService'
 import { tokenStorage } from '../api/services/tokenStorage'
 
@@ -41,7 +42,7 @@ export function AuthPage() {
         navigate(redirectTo, { replace: true })
       })
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось войти.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось войти.'))
     } finally {
       setSubmitting(false)
     }
@@ -59,7 +60,7 @@ export function AuthPage() {
       setMessage('Пользователь создан. Теперь можно выполнить вход.')
       setRegisterForm(initialRegisterForm)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось зарегистрироваться.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось зарегистрироваться.'))
     } finally {
       setSubmitting(false)
     }
@@ -68,25 +69,25 @@ export function AuthPage() {
   return (
     <div className="auth-layout">
       <section className="auth-panel auth-panel-highlight">
-        <p className="eyebrow">Локальная разработка</p>
-        <h1>Один вход для отчётов, найма и дальнейших операций</h1>
+        <p className="eyebrow">Брадобрей пати</p>
+        <h1>Система управления и мониторинг работы салонами, бронированиями, мастерами</h1>
         <p className="lede">
-          Токен сохраняется в <code>localStorage</code>, а затем автоматически
-          подставляется в сервисы API. Для разработки можно быстро
-          зарегистрировать клиента и тут же войти.
+          Отчёты в четком виде и PDF формате. Токен сохраняется в
+          <code> localStorage </code>
+          и автоматически подставляется во все API-запросы после входа.
         </p>
         <div className="tip-list">
           <div className="tip-card">
-            <strong>Регистрация</strong>
-            <span>Создаёт обычного пользователя через backend DTO.</span>
-          </div>
-          <div className="tip-card">
             <strong>Вход</strong>
-            <span>Сохраняет JWT и переводит в раздел отчётов.</span>
+            <span>Открывает рабочее пространство с учётом вашей роли и доступных операций.</span>
           </div>
           <div className="tip-card">
-            <strong>Swagger</strong>
-            <span>Бэкенд остаётся доступен отдельно, а фронтенд ходит через proxy Vite.</span>
+            <strong>Регистрация</strong>
+            <span>Позволяет быстро создать клиентскую учётную запись для локальной работы.</span>
+          </div>
+          <div className="tip-card">
+            <strong>Отчёты</strong>
+            <span>Таблицы, HTML и PDF уже подключены к backend API и Gotenberg.</span>
           </div>
         </div>
       </section>
@@ -98,14 +99,14 @@ export function AuthPage() {
             aria-hidden={mode !== 'login'}
           >
             <h2>Вход в систему</h2>
-            <p>Отчёты и операции после авторизации.</p>
+            <p>Рабочие операции, мониторинг и отчёты после авторизации.</p>
           </div>
           <div
             className={`auth-form-pane ${mode === 'register' ? 'auth-form-pane-active' : ''}`}
             aria-hidden={mode !== 'register'}
           >
             <h2>Регистрация</h2>
-            <p>Заполните данные для новой учётной записи.</p>
+            <p>Заполните данные для новой клиентской учётной записи.</p>
           </div>
         </div>
 

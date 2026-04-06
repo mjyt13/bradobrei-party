@@ -260,6 +260,26 @@ type Review struct {
 	User User `json:"user,omitempty"`
 }
 
+// ErrorLog хранит журнал исключительных ситуаций для требований 2.4.
+// Заполняется middleware после ответа сервера и позволяет просматривать историю
+// 400/401/403/404/500 без отдельного доступа к stdout контейнера.
+type ErrorLog struct {
+	ID         uint       `gorm:"primaryKey"                        json:"id"`
+	Method     string     `gorm:"not null;size:10;index"           json:"method"`
+	Path       string     `gorm:"not null;index"                   json:"path"`
+	Query      string     `gorm:"type:text"                        json:"query,omitempty"`
+	StatusCode int        `gorm:"not null;index"                   json:"status_code"`
+	ErrorCode  string     `gorm:"size:100;index"                   json:"error_code,omitempty"`
+	Message    string     `gorm:"type:text"                        json:"message,omitempty"`
+	IP         string     `gorm:"size:64"                          json:"ip,omitempty"`
+	UserAgent  string     `gorm:"type:text"                        json:"user_agent,omitempty"`
+	UserID     *uint      `gorm:"index"                            json:"user_id,omitempty"`
+	UserRole   *UserRole  `gorm:"type:varchar(30);index"           json:"user_role,omitempty"`
+	CreatedAt  time.Time  `                                        json:"created_at"`
+
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+}
+
 // ReportMeta описывает служебные метаданные экспортируемого отчёта.
 // Эти поля не относятся к ORM-таблицам: они нужны для HTML/PDF-представления,
 // когда один и тот же набор данных оформляется как печатный документ.

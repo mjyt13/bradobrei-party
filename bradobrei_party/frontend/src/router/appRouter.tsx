@@ -6,6 +6,7 @@ import { BookingsPage } from '../pages/BookingsPage'
 import { EmployeesPage } from '../pages/EmployeesPage'
 import { EmployeeRegistrationPage } from '../pages/EmployeeRegistrationPage'
 import { ErrorPage } from '../pages/ErrorPage'
+import { ErrorLogsPage } from '../pages/ErrorLogsPage'
 import { MaterialsPage } from '../pages/MaterialsPage'
 import { PaymentsPage } from '../pages/PaymentsPage'
 import { ReportsPage } from '../pages/ReportsPage'
@@ -31,6 +32,7 @@ export const appRouter = createBrowserRouter([
           { path: '/payments', element: <PaymentsPage /> },
           { path: '/employees', element: <EmployeesPage /> },
           { path: '/reports', element: <ReportsPage /> },
+          { path: '/error-logs', element: <ErrorLogsPage /> },
           { path: '/employees/new', element: <EmployeeRegistrationPage /> },
           { path: '*', element: <ErrorPage /> },
         ],

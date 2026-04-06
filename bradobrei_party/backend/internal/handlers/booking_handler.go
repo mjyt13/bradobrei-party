@@ -77,7 +77,7 @@ func (h *BookingHandler) GetAll(c *gin.Context) {
 
 // GetByID godoc
 // @Summary Бронирование по ID
-// @Description Возвращает одно бронирование со связанными услугами и платежом.
+// @Description Возвращает одно бронирование со связанными услугами и платёжом.
 // @Tags bookings
 // @Produce json
 // @Security BearerAuth
@@ -207,4 +207,34 @@ func (h *BookingHandler) Cancel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Бронирование отменено"})
+}
+
+// Delete godoc
+// @Summary Удалить бронирование
+// @Description Полностью удаляет бронирование и связанные позиции/платёж. Клиент может удалить только свою запись, администратор - любую.
+// @Tags bookings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID бронирования"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /bookings/{id} [delete]
+func (h *BookingHandler) Delete(c *gin.Context) {
+	claims, _ := middleware.GetCurrentClaims(c)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
+		return
+	}
+
+	if err := h.bookingService.Delete(uint(id), claims.UserID, claims.Role); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "delete_failed",
+			Code:    400,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Бронирование удалено"})
 }

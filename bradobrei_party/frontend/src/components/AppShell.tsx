@@ -1,26 +1,31 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { apiConfig } from '../api/config'
+import { getReadableErrorMessage } from '../api/errors'
 import { authService } from '../api/services/authService'
 import { tokenStorage } from '../api/services/tokenStorage'
 import { formatRole } from '../shared/formatters'
+import { canAccessRoute, getDefaultRouteForRole, getVisibleNavigation } from '../shared/rbac'
 import type { UserDto } from '../types/dto/auth'
-
-const navigation = [
-  { to: '/salons', label: 'Салоны' },
-  { to: '/bookings', label: 'Бронирования' },
-  { to: '/services', label: 'Услуги' },
-  { to: '/materials', label: 'Материалы' },
-  { to: '/payments', label: 'Платежи' },
-  { to: '/employees', label: 'Сотрудники' },
-  { to: '/reports', label: 'Отчёты' },
-  { to: '/employees/new', label: 'Новый сотрудник' },
-]
 
 export function AppShell() {
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
+  const previousPathRef = useRef(location.pathname)
+
+  const navigation = useMemo(
+    () => getVisibleNavigation(currentUser?.role),
+    [currentUser?.role],
+  )
+
+  useEffect(() => {
+    if (previousPathRef.current !== location.pathname) {
+      previousPathRef.current = location.pathname
+      setError('')
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     let cancelled = false
@@ -34,9 +39,11 @@ export function AppShell() {
       })
       .catch((requestError: Error) => {
         if (!cancelled) {
-          setError(requestError.message)
+          setError(getReadableErrorMessage(requestError, 'Не удалось загрузить профиль текущего пользователя.'))
           tokenStorage.clear()
-          navigate('/auth', { replace: true })
+          startTransition(() => {
+            navigate('/auth', { replace: true })
+          })
         }
       })
 
@@ -45,6 +52,31 @@ export function AppShell() {
     }
   }, [navigate])
 
+  useEffect(() => {
+    function handleUnauthorized() {
+      setError('Сессия истекла. Выполните вход повторно.')
+      startTransition(() => {
+        navigate('/auth', { replace: true })
+      })
+    }
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized)
+  }, [navigate])
+
+  useEffect(() => {
+    if (!currentUser) {
+      return
+    }
+
+    if (!canAccessRoute(currentUser.role, location.pathname)) {
+      setError('Этот раздел недоступен для вашей роли. Открыт ближайший доступный экран.')
+      startTransition(() => {
+        navigate(getDefaultRouteForRole(currentUser.role), { replace: true })
+      })
+    }
+  }, [currentUser, location.pathname, navigate])
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -52,7 +84,8 @@ export function AppShell() {
           <p className="eyebrow">Bradobrei Party</p>
           <h1>Панель операций и отчётов</h1>
           <p className="lede">
-            Один контур для авторизации, справочников, бронирований, платежей, кадровых операций и аналитики, уже подключённой к текущему backend API.
+            Система управления и мониторинга работы с салонами, бронированиями, мастерами,
+            платежами и аналитикой.
           </p>
         </div>
 
@@ -94,7 +127,9 @@ export function AppShell() {
             className="ghost-button"
             onClick={() => {
               tokenStorage.clear()
-              navigate('/auth', { replace: true })
+              startTransition(() => {
+                navigate('/auth', { replace: true })
+              })
             }}
           >
             Выйти

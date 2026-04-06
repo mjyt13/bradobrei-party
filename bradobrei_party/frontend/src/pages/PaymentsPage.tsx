@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DataTable, type TableColumn } from '../components/DataTable'
+import { useOutletContext } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
 import { bookingService } from '../api/services/bookingService'
 import { paymentService } from '../api/services/paymentService'
-import type { BookingDto, CreatePaymentRequestDto, PaymentDto } from '../types/dto/entities'
+import { DataTable, type TableColumn } from '../components/DataTable'
 import { formatCurrency, formatDateTime, formatPaymentStatus } from '../shared/formatters'
 import { paymentStatusOptions } from '../shared/options'
+import type { AppShellOutletContext } from '../types/appShell'
+import type { BookingDto, CreatePaymentRequestDto, PaymentDto } from '../types/dto/entities'
 
 const initialForm: CreatePaymentRequestDto = {
   booking_id: 0,
@@ -27,6 +30,7 @@ const paymentColumns: Array<TableColumn<PaymentDto>> = [
 ]
 
 export function PaymentsPage() {
+  const { currentUser } = useOutletContext<AppShellOutletContext>()
   const [payments, setPayments] = useState<PaymentDto[]>([])
   const [bookings, setBookings] = useState<BookingDto[]>([])
   const [form, setForm] = useState(initialForm)
@@ -34,6 +38,9 @@ export function PaymentsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+
+  const canCreatePayments =
+    currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'ACCOUNTANT'
 
   const availableBookings = useMemo(
     () => bookings.filter((booking) => !booking.payment),
@@ -50,18 +57,22 @@ export function PaymentsPage() {
       setPayments(paymentsResponse)
       setBookings(bookingsResponse)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить платежи.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось загрузить платежи.'))
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadPageData()
+    void loadPageData()
   }, [])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!canCreatePayments) {
+      return
+    }
+
     setSubmitting(true)
     setError('')
     setMessage('')
@@ -76,7 +87,7 @@ export function PaymentsPage() {
       setForm(initialForm)
       await loadPageData()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось создать платёж.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось создать платёж.'))
     } finally {
       setSubmitting(false)
     }
@@ -88,59 +99,91 @@ export function PaymentsPage() {
         <p className="eyebrow">Финансовый контур</p>
         <h2>Платежи</h2>
         <p className="section-description">
-          На этом экране можно заводить оплату по существующим бронированиям и просматривать журнал уже созданных транзакций.
+          Журнал оплаты по бронированиям. Создание платежей доступно администратору и бухгалтеру,
+          а управляющий сетью работает в режиме просмотра.
         </p>
       </div>
 
       {message ? <div className="alert alert-success">{message}</div> : null}
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      <form className="card-form card-form-grid" onSubmit={handleSubmit}>
-        <label className="field">
-          <span>Бронирование</span>
-          <select
-            value={form.booking_id || ''}
-            onChange={(event) => {
-              const bookingId = Number(event.target.value)
-              const booking = availableBookings.find((item) => item.id === bookingId)
-              setForm((current) => ({
-                ...current,
-                booking_id: bookingId,
-                amount: booking?.total_price || current.amount,
-              }))
-            }}
-            required
-          >
-            <option value="">Выберите бронирование</option>
-            {availableBookings.map((booking) => (
-              <option key={booking.id} value={booking.id}>
-                #{booking.id} • {booking.salon?.name || `Салон ${booking.salon_id}`} • {formatCurrency(booking.total_price)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Сумма</span>
-          <input type="number" min="0" value={form.amount || ''} onChange={(event) => setForm((current) => ({ ...current, amount: Number(event.target.value) }))} required />
-        </label>
-        <label className="field">
-          <span>Статус</span>
-          <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as CreatePaymentRequestDto['status'] }))}>
-            {paymentStatusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Внешний ID транзакции</span>
-          <input value={form.external_transaction_id} onChange={(event) => setForm((current) => ({ ...current, external_transaction_id: event.target.value }))} placeholder="txn_local_12345" />
-        </label>
-        <button type="submit" className="primary-button field-wide" disabled={submitting}>
-          {submitting ? 'Создаём платёж...' : 'Создать платёж'}
-        </button>
-      </form>
+      {canCreatePayments ? (
+        <form className="card-form card-form-grid" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Бронирование</span>
+            <select
+              value={form.booking_id || ''}
+              onChange={(event) => {
+                const bookingId = Number(event.target.value)
+                const booking = availableBookings.find((item) => item.id === bookingId)
+                setForm((current) => ({
+                  ...current,
+                  booking_id: bookingId,
+                  amount: booking?.total_price || current.amount,
+                }))
+              }}
+              required
+            >
+              <option value="">Выберите бронирование</option>
+              {availableBookings.map((booking) => (
+                <option key={booking.id} value={booking.id}>
+                  #{booking.id} • {booking.salon?.name || `Салон ${booking.salon_id}`} •{' '}
+                  {formatCurrency(booking.total_price)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Сумма</span>
+            <input
+              type="number"
+              min="0"
+              value={form.amount || ''}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, amount: Number(event.target.value) }))
+              }
+              required
+            />
+          </label>
+          <label className="field">
+            <span>Статус</span>
+            <select
+              value={form.status}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  status: event.target.value as CreatePaymentRequestDto['status'],
+                }))
+              }
+            >
+              {paymentStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Внешний ID транзакции</span>
+            <input
+              value={form.external_transaction_id}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, external_transaction_id: event.target.value }))
+              }
+              placeholder="txn_local_12345"
+            />
+          </label>
+          <button type="submit" className="primary-button field-wide" disabled={submitting}>
+            {submitting ? 'Создаём платёж...' : 'Создать платёж'}
+          </button>
+        </form>
+      ) : (
+        <div className="filter-card">
+          <div className="report-note">
+            Для вашей роли доступен просмотр платежей без создания новых транзакций.
+          </div>
+        </div>
+      )}
 
       <DataTable
         caption={loading ? 'Загружаем платежи...' : 'Журнал платежей'}

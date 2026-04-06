@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
+import { employeeService } from '../api/services/employeeService'
+import { salonService } from '../api/services/salonService'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { DataTable, type TableColumn } from '../components/DataTable'
-import { employeeService } from '../api/services/employeeService'
-import type { EmployeeManagementDto, UpdateEmployeeRequestDto } from '../types/dto/employee'
+import { ScheduleEditor } from '../components/ScheduleEditor'
 import { formatCurrency, formatJsonPreview, formatRole } from '../shared/formatters'
 import { employeeRoleOptions } from '../shared/options'
+import type { AppShellOutletContext } from '../types/appShell'
+import type { EmployeeManagementDto, UpdateEmployeeRequestDto } from '../types/dto/employee'
+import type { SalonDto } from '../types/dto/entities'
 
 const initialForm: UpdateEmployeeRequestDto = {
   username: '',
@@ -18,94 +24,120 @@ const initialForm: UpdateEmployeeRequestDto = {
   salon_ids: [],
 }
 
-const employeeColumns = (
+function buildEmployeeColumns(
+  canManageEmployees: boolean,
   onEdit: (employee: EmployeeManagementDto) => void,
   onFire: (employee: EmployeeManagementDto) => void,
-): Array<TableColumn<EmployeeManagementDto>> => [
-  {
-    key: 'employee',
-    header: 'Сотрудник',
-    render: (row) => row.user?.full_name || `Профиль #${row.id}`,
-  },
-  {
-    key: 'username',
-    header: 'Логин',
-    render: (row) => row.user?.username || '—',
-  },
-  {
-    key: 'role',
-    header: 'Роль',
-    render: (row) => formatRole(row.user?.role || '—'),
-  },
-  {
-    key: 'salary',
-    header: 'Оклад',
-    render: (row) => formatCurrency(row.expected_salary),
-  },
-  {
-    key: 'salons',
-    header: 'Салоны',
-    render: (row) => row.salons?.map((salon) => salon.name).join(', ') || '—',
-  },
-  {
-    key: 'schedule',
-    header: 'График',
-    render: (row) => formatJsonPreview(row.work_schedule),
-  },
-  {
-    key: 'actions',
-    header: 'Действия',
-    render: (row) => (
-      <div className="table-actions">
-        <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
-          Изменить
-        </button>
-        <button type="button" className="danger-button button-small" onClick={() => onFire(row)}>
-          Уволить
-        </button>
-      </div>
-    ),
-  },
-]
-
-function parseSalonIds(value: string) {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((item) => Number(item))
-    .filter((item) => !Number.isNaN(item) && item > 0)
+): Array<TableColumn<EmployeeManagementDto>> {
+  return [
+    {
+      key: 'employee',
+      header: 'Сотрудник',
+      render: (row) => row.user?.full_name || `Профиль #${row.id}`,
+    },
+    {
+      key: 'username',
+      header: 'Логин',
+      render: (row) => row.user?.username || '—',
+    },
+    {
+      key: 'role',
+      header: 'Роль',
+      render: (row) => formatRole(row.user?.role || '—'),
+    },
+    {
+      key: 'salary',
+      header: 'Оклад',
+      render: (row) => formatCurrency(row.expected_salary),
+    },
+    {
+      key: 'salons',
+      header: 'Салоны',
+      render: (row) =>
+        row.salons?.length
+          ? row.salons.map((salon) => `#${salon.id} ${salon.name}`).join(', ')
+          : '—',
+    },
+    {
+      key: 'schedule',
+      header: 'График',
+      render: (row) => formatJsonPreview(row.work_schedule),
+    },
+    {
+      key: 'actions',
+      header: 'Действия',
+      render: (row) =>
+        canManageEmployees ? (
+          <div className="table-actions">
+            <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
+              Изменить
+            </button>
+            <button type="button" className="danger-button button-small" onClick={() => onFire(row)}>
+              Уволить
+            </button>
+          </div>
+        ) : (
+          <span className="topbar-meta">Просмотр</span>
+        ),
+    },
+  ]
 }
 
 export function EmployeesPage() {
+  const { currentUser } = useOutletContext<AppShellOutletContext>()
   const { confirm, dialog } = useConfirmDialog()
   const [employees, setEmployees] = useState<EmployeeManagementDto[]>([])
+  const [salons, setSalons] = useState<SalonDto[]>([])
   const [editingEmployee, setEditingEmployee] = useState<EmployeeManagementDto | null>(null)
   const [form, setForm] = useState(initialForm)
-  const [salonIdsInput, setSalonIdsInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  async function loadEmployees() {
+  const canManageEmployees =
+    currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'HR_SPECIALIST'
+
+  const employeeColumns = useMemo(
+    () => buildEmployeeColumns(canManageEmployees, startEdit, handleFire),
+    [canManageEmployees],
+  )
+
+  useEffect(() => {
+    void loadPageData()
+  }, [])
+
+  async function loadPageData() {
     setLoading(true)
+    setError('')
+
     try {
-      setEmployees(await employeeService.getAll())
+      const [employeesResponse, salonsResponse] = await Promise.all([
+        employeeService.getAll(),
+        salonService.getAll(),
+      ])
+      setEmployees(employeesResponse)
+      setSalons(salonsResponse)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить сотрудников.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось загрузить сотрудников.'))
+      setEmployees([])
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    void loadEmployees()
-  }, [])
+  function toggleSalon(salonId: number) {
+    setForm((current) => ({
+      ...current,
+      salon_ids: current.salon_ids.includes(salonId)
+        ? current.salon_ids.filter((id) => id !== salonId)
+        : [...current.salon_ids, salonId],
+    }))
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!editingEmployee) {
+    if (!editingEmployee || !canManageEmployees) {
       return
     }
 
@@ -117,21 +149,23 @@ export function EmployeesPage() {
       await employeeService.update(editingEmployee.id, {
         ...form,
         expected_salary: Number(form.expected_salary),
-        salon_ids: parseSalonIds(salonIdsInput),
       })
       setMessage(`Данные сотрудника #${editingEmployee.id} обновлены.`)
       setEditingEmployee(null)
       setForm(initialForm)
-      setSalonIdsInput('')
-      await loadEmployees()
+      await loadPageData()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось обновить сотрудника.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось обновить сотрудника.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleFire(employee: EmployeeManagementDto) {
+    if (!canManageEmployees) {
+      return
+    }
+
     const shouldContinue = await confirm({
       title: 'Увольнение сотрудника',
       message: `Уволить сотрудника "${employee.user?.full_name || employee.id}"?`,
@@ -151,15 +185,18 @@ export function EmployeesPage() {
       if (editingEmployee?.id === employee.id) {
         setEditingEmployee(null)
         setForm(initialForm)
-        setSalonIdsInput('')
       }
-      await loadEmployees()
+      await loadPageData()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось уволить сотрудника.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось уволить сотрудника.'))
     }
   }
 
   function startEdit(employee: EmployeeManagementDto) {
+    if (!canManageEmployees) {
+      return
+    }
+
     setEditingEmployee(employee)
     setForm({
       username: employee.user?.username || '',
@@ -172,7 +209,6 @@ export function EmployeesPage() {
       work_schedule: employee.work_schedule || '',
       salon_ids: employee.salons?.map((salon) => salon.id) || [],
     })
-    setSalonIdsInput((employee.salons || []).map((salon) => salon.id).join(', '))
     setMessage('')
     setError('')
   }
@@ -184,14 +220,15 @@ export function EmployeesPage() {
         <p className="eyebrow">Кадровый контур</p>
         <h2>Управление сотрудниками</h2>
         <p className="section-description">
-          Редактирование профилей, ролей, графика и закрепления за салонами; увольнение. Найм остаётся на отдельной странице.
+          Редактирование профилей, ролей, графика и закрепления за салонами. Для управляющего
+          сетью экран работает в режиме просмотра, а редактирование доступно администратору и HR.
         </p>
       </div>
 
       {message ? <div className="alert alert-success">{message}</div> : null}
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      {editingEmployee ? (
+      {editingEmployee && canManageEmployees ? (
         <form className="card-form card-form-grid" onSubmit={handleSubmit}>
           <label className="field">
             <span>Логин</span>
@@ -206,7 +243,10 @@ export function EmployeesPage() {
             <select
               value={form.role}
               onChange={(event) =>
-                setForm((current) => ({ ...current, role: event.target.value as UpdateEmployeeRequestDto['role'] }))
+                setForm((current) => ({
+                  ...current,
+                  role: event.target.value as UpdateEmployeeRequestDto['role'],
+                }))
               }
             >
               {employeeRoleOptions.map((option) => (
@@ -250,14 +290,6 @@ export function EmployeesPage() {
               }
             />
           </label>
-          <label className="field">
-            <span>ID салонов через запятую</span>
-            <input
-              value={salonIdsInput}
-              onChange={(event) => setSalonIdsInput(event.target.value)}
-              placeholder="1, 2"
-            />
-          </label>
           <label className="field field-wide">
             <span>Специализация</span>
             <input
@@ -265,14 +297,36 @@ export function EmployeesPage() {
               onChange={(event) => setForm((current) => ({ ...current, specialization: event.target.value }))}
             />
           </label>
-          <label className="field field-wide">
-            <span>График JSON</span>
-            <textarea
-              rows={4}
-              value={form.work_schedule}
-              onChange={(event) => setForm((current) => ({ ...current, work_schedule: event.target.value }))}
-            />
-          </label>
+
+          <ScheduleEditor
+            label="График работы"
+            value={form.work_schedule}
+            onChange={(nextValue) => setForm((current) => ({ ...current, work_schedule: nextValue }))}
+            hint="Оставьте день пустым, если сотрудник в этот день не работает."
+            placeholder="10:00-19:00"
+          />
+
+          <div className="field field-wide">
+            <span>Закрепление за салонами</span>
+            <div className="selection-grid">
+              {salons.map((salon) => (
+                <label key={salon.id} className="selection-item">
+                  <input
+                    type="checkbox"
+                    checked={form.salon_ids.includes(salon.id)}
+                    onChange={() => toggleSalon(salon.id)}
+                  />
+                  <span>
+                    #{salon.id} {salon.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <span className="field-hint">
+              ID остаётся видимым рядом с названием, чтобы было удобно сверять его с API и
+              отчётами.
+            </span>
+          </div>
           <div className="button-row field-wide">
             <button type="submit" className="primary-button" disabled={submitting}>
               {submitting ? 'Сохраняем...' : 'Сохранить изменения'}
@@ -283,7 +337,6 @@ export function EmployeesPage() {
               onClick={() => {
                 setEditingEmployee(null)
                 setForm(initialForm)
-                setSalonIdsInput('')
               }}
             >
               Отменить
@@ -292,9 +345,17 @@ export function EmployeesPage() {
         </form>
       ) : null}
 
+      {!canManageEmployees ? (
+        <div className="filter-card">
+          <div className="report-note">
+            Для вашей роли доступен просмотр сотрудников без изменения кадровых данных.
+          </div>
+        </div>
+      ) : null}
+
       <DataTable
         caption={loading ? 'Загружаем сотрудников...' : 'Список сотрудников'}
-        columns={employeeColumns(startEdit, handleFire)}
+        columns={employeeColumns}
         rows={employees}
         emptyText="Сотрудники пока не найдены."
       />

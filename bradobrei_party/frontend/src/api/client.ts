@@ -22,6 +22,33 @@ export class ApiError extends Error {
   }
 }
 
+function notifyUnauthorized() {
+  window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+}
+
+function getApiErrorMessage(status: number, payload: ErrorResponseDto | undefined, fallback: string) {
+  if (payload?.message) {
+    return payload.message
+  }
+
+  if (payload?.error) {
+    return payload.error
+  }
+
+  switch (status) {
+    case 401:
+      return 'Сессия истекла или доступ запрещён. Выполните вход повторно.'
+    case 403:
+      return 'Недостаточно прав для выполнения этого действия.'
+    case 404:
+      return 'Запрошенные данные не найдены.'
+    case 500:
+      return 'На сервере произошла ошибка. Повторите попытку позже.'
+    default:
+      return fallback
+  }
+}
+
 function buildUrl(path: string, query?: QueryParams) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const url = new URL(`${apiConfig.apiBaseUrl}${normalizedPath}`, window.location.origin)
@@ -77,10 +104,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!response.ok) {
     if (response.status === 401) {
       tokenStorage.clear()
+      notifyUnauthorized()
     }
 
     const errorPayload = typeof payload === 'object' && payload !== null ? (payload as ErrorResponseDto) : undefined
-    const message = errorPayload?.message || errorPayload?.error || response.statusText
+    const message = getApiErrorMessage(response.status, errorPayload, response.statusText)
     throw new ApiError(response.status, message, errorPayload)
   }
 
@@ -117,13 +145,15 @@ export async function apiBlobRequest(path: string, options: RequestOptions = {})
 
     if (response.status === 401) {
       tokenStorage.clear()
+      notifyUnauthorized()
     }
 
     const errorPayload = typeof payload === 'object' && payload !== null ? (payload as ErrorResponseDto) : undefined
-    const message =
-      errorPayload?.message ||
-      errorPayload?.error ||
-      (typeof payload === 'string' ? payload : response.statusText)
+    const message = getApiErrorMessage(
+      response.status,
+      errorPayload,
+      typeof payload === 'string' ? payload : response.statusText,
+    )
     throw new ApiError(response.status, message, errorPayload)
   }
 

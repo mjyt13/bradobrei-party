@@ -72,7 +72,6 @@ func (r *BookingRepository) GetByMasterID(masterID uint) ([]models.Booking, erro
 	return bookings, err
 }
 
-// HasOverlap — проверка пересечения времени у мастера (ТЗ: validateNoOverlap)
 func (r *BookingRepository) HasOverlap(masterID uint, start time.Time, durationMin int, excludeID uint) (bool, error) {
 	end := start.Add(time.Duration(durationMin) * time.Minute)
 
@@ -101,7 +100,20 @@ func (r *BookingRepository) Update(b *models.Booking) error {
 	return r.db.Save(b).Error
 }
 
-// GetByPeriodAndSalon — для отчёта 2.2.2 (месячная активность)
+func (r *BookingRepository) Delete(id uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("booking_id = ?", id).Delete(&models.Payment{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("booking_id = ?", id).Delete(&models.BookingItem{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Delete(&models.Booking{}, id).Error
+	})
+}
+
 func (r *BookingRepository) GetByPeriodAndSalon(salonID uint, from, to time.Time) ([]models.Booking, error) {
 	var bookings []models.Booking
 	q := r.db.

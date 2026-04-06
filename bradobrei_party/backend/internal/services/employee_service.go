@@ -42,6 +42,19 @@ func (s *EmployeeService) HireEmployee(req dto.HireEmployeeRequest) (*models.Emp
 	if req.Role == models.RoleClient {
 		return nil, errors.New("нельзя нанять пользователя с ролью CLIENT")
 	}
+	if req.ExpectedSalary <= 0 {
+		return nil, errors.New("expected_salary должен быть больше 0")
+	}
+
+	if req.WorkSchedule != "" {
+		normalized, err := normalizeScheduleJSON(req.WorkSchedule, "work_schedule")
+		if err != nil {
+			return nil, err
+		}
+		if normalized != nil {
+			req.WorkSchedule = *normalized
+		}
+	}
 
 	if _, err := s.userRepo.GetByUsername(req.Username); err == nil {
 		return nil, errors.New("пользователь с таким логином уже существует")
@@ -136,7 +149,16 @@ func (s *EmployeeService) UpdateSchedule(userID uint, schedule string) error {
 	if err != nil {
 		return errors.New("профиль сотрудника не найден")
 	}
-	return s.employeeRepo.UpdateSchedule(profile.ID, schedule)
+
+	normalized, err := normalizeScheduleJSON(schedule, "schedule")
+	if err != nil {
+		return err
+	}
+	if normalized == nil {
+		return errors.New("schedule не должен быть пустым")
+	}
+
+	return s.employeeRepo.UpdateSchedule(profile.ID, *normalized)
 }
 
 func (s *EmployeeService) UpdateProfile(profile *models.EmployeeProfile) error {
@@ -146,6 +168,9 @@ func (s *EmployeeService) UpdateProfile(profile *models.EmployeeProfile) error {
 func (s *EmployeeService) UpdateEmployee(profileID uint, req dto.UpdateEmployeeRequest) (*models.EmployeeProfile, error) {
 	if req.Role == models.RoleClient {
 		return nil, errors.New("сотруднику нельзя назначить роль CLIENT")
+	}
+	if req.ExpectedSalary <= 0 {
+		return nil, errors.New("expected_salary должен быть больше 0")
 	}
 
 	profile, err := s.employeeRepo.GetByID(profileID)
@@ -165,7 +190,11 @@ func (s *EmployeeService) UpdateEmployee(profileID uint, req dto.UpdateEmployeeR
 
 	var schedulePtr *string
 	if req.WorkSchedule != "" {
-		schedulePtr = &req.WorkSchedule
+		normalized, err := normalizeScheduleJSON(req.WorkSchedule, "work_schedule")
+		if err != nil {
+			return nil, err
+		}
+		schedulePtr = normalized
 	}
 
 	user.Username = req.Username
@@ -228,13 +257,20 @@ func (s *EmployeeService) PatchEmployee(profileID uint, req dto.PatchEmployeeReq
 		profile.Specialization = *req.Specialization
 	}
 	if req.ExpectedSalary != nil {
+		if *req.ExpectedSalary <= 0 {
+			return nil, errors.New("expected_salary должен быть больше 0")
+		}
 		profile.ExpectedSalary = *req.ExpectedSalary
 	}
 	if req.WorkSchedule != nil {
 		if *req.WorkSchedule == "" {
 			profile.WorkSchedule = nil
 		} else {
-			profile.WorkSchedule = req.WorkSchedule
+			normalized, err := normalizeScheduleJSON(*req.WorkSchedule, "work_schedule")
+			if err != nil {
+				return nil, err
+			}
+			profile.WorkSchedule = normalized
 		}
 	}
 

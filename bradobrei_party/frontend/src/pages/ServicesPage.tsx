@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useConfirmDialog } from '../components/ConfirmDialog'
-import { DataTable, type TableColumn } from '../components/DataTable'
+import { useOutletContext } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
 import { employeeService } from '../api/services/employeeService'
 import { materialService } from '../api/services/materialService'
 import { serviceService } from '../api/services/serviceService'
+import { useConfirmDialog } from '../components/ConfirmDialog'
+import { DataTable, type TableColumn } from '../components/DataTable'
+import { formatCurrency, formatRole } from '../shared/formatters'
+import type { AppShellOutletContext } from '../types/appShell'
 import type { EmployeeManagementDto } from '../types/dto/employee'
 import type { MaterialDto, ServiceDto, UpsertServiceRequestDto } from '../types/dto/entities'
-import { formatCurrency, formatRole } from '../shared/formatters'
 
 interface ServiceFormState extends UpsertServiceRequestDto {
   master_ids: number[]
@@ -27,51 +30,58 @@ const initialForm: ServiceFormState = {
 
 const masterRoles = new Set(['BASIC_MASTER', 'ADVANCED_MASTER'])
 
-const serviceColumns = (
+function buildServiceColumns(
+  canManageServices: boolean,
   onEdit: (service: ServiceDto) => void,
   onDelete: (service: ServiceDto) => void,
-): Array<TableColumn<ServiceDto>> => [
-  { key: 'name', header: 'Услуга', render: (row) => row.name },
-  { key: 'description', header: 'Описание', render: (row) => row.description || '—' },
-  { key: 'price', header: 'Цена', render: (row) => formatCurrency(row.price) },
-  { key: 'duration', header: 'Длительность', render: (row) => `${row.duration_minutes} мин.` },
-  {
-    key: 'masters',
-    header: 'Мастера',
-    render: (row) =>
-      row.employees?.length
-        ? row.employees
-            .map((employee) => employee.user?.full_name || `Профиль #${employee.id}`)
-            .join(', ')
-        : '—',
-  },
-  {
-    key: 'materials',
-    header: 'Материалы',
-    render: (row) =>
-      row.materials?.length
-        ? row.materials
-            .map((item) => `${item.material?.name || item.material_id} x${item.quantity_per_use}`)
-            .join(', ')
-        : '—',
-  },
-  {
-    key: 'actions',
-    header: 'Действия',
-    render: (row) => (
-      <div className="table-actions">
-        <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
-          Изменить
-        </button>
-        <button type="button" className="danger-button button-small" onClick={() => onDelete(row)}>
-          Удалить
-        </button>
-      </div>
-    ),
-  },
-]
+): Array<TableColumn<ServiceDto>> {
+  return [
+    { key: 'name', header: 'Услуга', render: (row) => row.name },
+    { key: 'description', header: 'Описание', render: (row) => row.description || '—' },
+    { key: 'price', header: 'Цена', render: (row) => formatCurrency(row.price) },
+    { key: 'duration', header: 'Длительность', render: (row) => `${row.duration_minutes} мин.` },
+    {
+      key: 'masters',
+      header: 'Мастера',
+      render: (row) =>
+        row.employees?.length
+          ? row.employees
+              .map((employee) => employee.user?.full_name || `Профиль #${employee.id}`)
+              .join(', ')
+          : '—',
+    },
+    {
+      key: 'materials',
+      header: 'Материалы',
+      render: (row) =>
+        row.materials?.length
+          ? row.materials
+              .map((item) => `${item.material?.name || item.material_id} x${item.quantity_per_use}`)
+              .join(', ')
+          : '—',
+    },
+    {
+      key: 'actions',
+      header: 'Действия',
+      render: (row) =>
+        canManageServices ? (
+          <div className="table-actions">
+            <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
+              Изменить
+            </button>
+            <button type="button" className="danger-button button-small" onClick={() => onDelete(row)}>
+              Удалить
+            </button>
+          </div>
+        ) : (
+          <span className="topbar-meta">Просмотр</span>
+        ),
+    },
+  ]
+}
 
 export function ServicesPage() {
+  const { currentUser } = useOutletContext<AppShellOutletContext>()
   const { confirm, dialog } = useConfirmDialog()
   const [form, setForm] = useState<ServiceFormState>(initialForm)
   const [services, setServices] = useState<ServiceDto[]>([])
@@ -83,9 +93,17 @@ export function ServicesPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  const canManageServices =
+    currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'ADVANCED_MASTER'
+
   const masters = useMemo(
     () => employees.filter((employee) => employee.user && masterRoles.has(employee.user.role)),
     [employees],
+  )
+
+  const serviceColumns = useMemo(
+    () => buildServiceColumns(canManageServices, startEdit, handleDelete),
+    [canManageServices],
   )
 
   async function loadPageData() {
@@ -93,17 +111,25 @@ export function ServicesPage() {
     setError('')
 
     try {
-      const [servicesData, materialsData, employeesData] = await Promise.all([
+      const [servicesData, materialsData] = await Promise.all([
         serviceService.getAll(),
         materialService.getAll(),
-        employeeService.getAll(),
       ])
+
+      let employeesData: EmployeeManagementDto[] = []
+      if (
+        currentUser?.role === 'ADMINISTRATOR' ||
+        currentUser?.role === 'HR_SPECIALIST' ||
+        currentUser?.role === 'NETWORK_MANAGER'
+      ) {
+        employeesData = await employeeService.getAll()
+      }
 
       setServices(servicesData)
       setMaterials(materialsData)
       setEmployees(employeesData)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить справочники услуг.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось загрузить справочники услуг.'))
     } finally {
       setLoading(false)
     }
@@ -111,7 +137,7 @@ export function ServicesPage() {
 
   useEffect(() => {
     void loadPageData()
-  }, [])
+  }, [currentUser?.role])
 
   function toggleMaster(userId: number) {
     setForm((current) => ({
@@ -182,6 +208,10 @@ export function ServicesPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!canManageServices) {
+      return
+    }
+
     setSubmitting(true)
     setError('')
     setMessage('')
@@ -208,13 +238,17 @@ export function ServicesPage() {
       setEditingService(null)
       await loadPageData()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось сохранить услугу.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось сохранить услугу.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDelete(service: ServiceDto) {
+    if (!canManageServices) {
+      return
+    }
+
     const shouldContinue = await confirm({
       title: 'Удаление услуги',
       message: `Удалить услугу "${service.name}"?`,
@@ -230,11 +264,15 @@ export function ServicesPage() {
       setMessage(`Услуга "${service.name}" удалена.`)
       await loadPageData()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось удалить услугу.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось удалить услугу.'))
     }
   }
 
   function startEdit(service: ServiceDto) {
+    if (!canManageServices) {
+      return
+    }
+
     setEditingService(service)
     setForm({
       name: service.name,
@@ -257,128 +295,143 @@ export function ServicesPage() {
         <p className="eyebrow">Прайс и выполнение</p>
         <h2>Услуги</h2>
         <p className="section-description">
-          Здесь мы поддерживаем прайс-лист, назначаем мастеров и задаём материалы по ID, чтобы услуга сразу была готова к использованию в бронировании и складских операциях.
+          Каталог услуг, связей с мастерами и материалов. Изменение услуг открыто
+          администратору и продвинутому мастеру, остальным ролям доступен просмотр.
         </p>
       </div>
 
       {message ? <div className="alert alert-success">{message}</div> : null}
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      <form className="card-form card-form-grid" onSubmit={handleSubmit}>
-        <label className="field">
-          <span>Название услуги</span>
-          <input
-            value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            placeholder="Мужская стрижка"
-            required
-          />
-        </label>
-        <label className="field">
-          <span>Цена</span>
-          <input
-            type="number"
-            min="0"
-            value={form.price}
-            onChange={(event) => setForm((current) => ({ ...current, price: Number(event.target.value) }))}
-          />
-        </label>
-        <label className="field">
-          <span>Длительность, минут</span>
-          <input
-            type="number"
-            min="60"
-            step="5"
-            value={form.duration_minutes}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, duration_minutes: Number(event.target.value) }))
-            }
-          />
-        </label>
-        <label className="field field-wide">
-          <span>Описание</span>
-          <textarea
-            rows={4}
-            value={form.description}
-            onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-            placeholder="Стрижка с мытьём головы и укладкой."
-          />
-        </label>
+      {canManageServices ? (
+        <form className="card-form card-form-grid" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Название услуги</span>
+            <input
+              value={form.name}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Мужская стрижка"
+              required
+            />
+          </label>
+          <label className="field">
+            <span>Цена</span>
+            <input
+              type="number"
+              min="0"
+              value={form.price}
+              onChange={(event) => setForm((current) => ({ ...current, price: Number(event.target.value) }))}
+            />
+          </label>
+          <label className="field">
+            <span>Длительность, минут</span>
+            <input
+              type="number"
+              min="60"
+              step="5"
+              value={form.duration_minutes}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, duration_minutes: Number(event.target.value) }))
+              }
+            />
+          </label>
+          <label className="field field-wide">
+            <span>Описание</span>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Стрижка с мытьём головы и укладкой."
+            />
+          </label>
 
-        <div className="field field-wide">
-          <span>Мастера</span>
-          <div className="selection-grid">
-            {masters.map((master) => (
-              <label key={master.id} className="selection-item">
-                <input
-                  type="checkbox"
-                  checked={form.master_ids.includes(master.user_id)}
-                  onChange={() => toggleMaster(master.user_id)}
-                />
-                <span>
-                  {master.user?.full_name || `Профиль #${master.id}`} ({formatRole(master.user?.role || '')})
-                </span>
-              </label>
-            ))}
-            {masters.length === 0 ? <p className="report-note">Доступные мастера пока не найдены.</p> : null}
-          </div>
-        </div>
-
-        <div className="field field-wide">
-          <span>Материалы</span>
-          <div className="selection-grid">
-            {materials.map((material) => {
-              const selected = form.materials.find((item) => item.material_id === material.id)
-
-              return (
-                <div key={material.id} className="selection-item selection-item-row">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selected)}
-                      onChange={(event) => updateMaterialSelection(material.id, event.target.checked)}
-                    />
-                    <span>
-                      {material.name} ({material.unit})
-                    </span>
-                  </label>
+          <div className="field field-wide">
+            <span>Мастера</span>
+            <div className="selection-grid">
+              {masters.map((master) => (
+                <label key={master.id} className="selection-item">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    disabled={!selected}
-                    value={selected?.quantity_per_use ?? 0}
-                    onChange={(event) => updateMaterialQuantity(material.id, Number(event.target.value))}
+                    type="checkbox"
+                    checked={form.master_ids.includes(master.user_id)}
+                    onChange={() => toggleMaster(master.user_id)}
                   />
-                </div>
-              )
-            })}
-            {materials.length === 0 ? <p className="report-note">Сначала добавьте материалы в справочник.</p> : null}
+                  <span>
+                    {master.user?.full_name || `Профиль #${master.id}`} ({formatRole(master.user?.role || '')})
+                  </span>
+                </label>
+              ))}
+              {masters.length === 0 ? (
+                <p className="report-note">
+                  Доступные мастера для привязки сейчас не загружены для вашей роли.
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="field field-wide">
+            <span>Материалы</span>
+            <div className="selection-grid">
+              {materials.map((material) => {
+                const selected = form.materials.find((item) => item.material_id === material.id)
+
+                return (
+                  <div key={material.id} className="selection-item selection-item-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selected)}
+                        onChange={(event) => updateMaterialSelection(material.id, event.target.checked)}
+                      />
+                      <span>
+                        {material.name} ({material.unit})
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      disabled={!selected}
+                      value={selected?.quantity_per_use ?? 0}
+                      onChange={(event) => updateMaterialQuantity(material.id, Number(event.target.value))}
+                    />
+                  </div>
+                )
+              })}
+              {materials.length === 0 ? (
+                <p className="report-note">Сначала добавьте материалы в справочник.</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="button-row field-wide">
+            <button type="submit" className="primary-button" disabled={submitting}>
+              {submitting ? 'Сохраняем...' : editingService ? 'Обновить услугу' : 'Создать услугу'}
+            </button>
+            {editingService ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setEditingService(null)
+                  setForm(initialForm)
+                }}
+              >
+                Сбросить редактирование
+              </button>
+            ) : null}
+          </div>
+        </form>
+      ) : (
+        <div className="filter-card">
+          <div className="report-note">
+            Для вашей роли доступен просмотр каталога услуг без изменения справочника.
           </div>
         </div>
-
-        <div className="button-row field-wide">
-          <button type="submit" className="primary-button" disabled={submitting}>
-            {submitting ? 'Сохраняем...' : editingService ? 'Обновить услугу' : 'Создать услугу'}
-          </button>
-          {editingService ? (
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                setEditingService(null)
-                setForm(initialForm)
-              }}
-            >
-              Сбросить редактирование
-            </button>
-          ) : null}
-        </div>
-      </form>
+      )}
 
       <DataTable
         caption={loading ? 'Загружаем услуги...' : 'Справочник услуг'}
-        columns={serviceColumns(startEdit, handleDelete)}
+        columns={serviceColumns}
         rows={services}
         emptyText="Услуги пока отсутствуют."
       />

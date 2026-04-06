@@ -1,38 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { getReadableErrorMessage } from '../api/errors'
+import { materialService } from '../api/services/materialService'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { DataTable, type TableColumn } from '../components/DataTable'
-import { materialService } from '../api/services/materialService'
-import type { MaterialDto, UpsertMaterialRequestDto } from '../types/dto/entities'
 import { materialUnitOptions } from '../shared/options'
+import type { AppShellOutletContext } from '../types/appShell'
+import type { MaterialDto, UpsertMaterialRequestDto } from '../types/dto/entities'
 
 const initialForm: UpsertMaterialRequestDto = {
   name: '',
   unit: 'мл',
 }
 
-const materialColumns = (
+function buildMaterialColumns(
+  canManageMaterials: boolean,
   onEdit: (material: MaterialDto) => void,
   onDelete: (material: MaterialDto) => void,
-): Array<TableColumn<MaterialDto>> => [
-  { key: 'name', header: 'Материал', render: (row) => row.name },
-  { key: 'unit', header: 'Единица', render: (row) => row.unit || '—' },
-  {
-    key: 'actions',
-    header: 'Действия',
-    render: (row) => (
-      <div className="table-actions">
-        <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
-          Изменить
-        </button>
-        <button type="button" className="danger-button button-small" onClick={() => onDelete(row)}>
-          Удалить
-        </button>
-      </div>
-    ),
-  },
-]
+): Array<TableColumn<MaterialDto>> {
+  return [
+    { key: 'name', header: 'Материал', render: (row) => row.name },
+    { key: 'unit', header: 'Единица', render: (row) => row.unit || '—' },
+    {
+      key: 'actions',
+      header: 'Действия',
+      render: (row) =>
+        canManageMaterials ? (
+          <div className="table-actions">
+            <button type="button" className="ghost-button button-small" onClick={() => onEdit(row)}>
+              Изменить
+            </button>
+            <button type="button" className="danger-button button-small" onClick={() => onDelete(row)}>
+              Удалить
+            </button>
+          </div>
+        ) : (
+          <span className="topbar-meta">Просмотр</span>
+        ),
+    },
+  ]
+}
 
 export function MaterialsPage() {
+  const { currentUser } = useOutletContext<AppShellOutletContext>()
   const { confirm, dialog } = useConfirmDialog()
   const [form, setForm] = useState(initialForm)
   const [materials, setMaterials] = useState<MaterialDto[]>([])
@@ -42,12 +52,18 @@ export function MaterialsPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  const canManageMaterials = currentUser?.role === 'ADMINISTRATOR'
+  const materialColumns = useMemo(
+    () => buildMaterialColumns(canManageMaterials, startEdit, handleDelete),
+    [canManageMaterials],
+  )
+
   async function loadMaterials() {
     setLoading(true)
     try {
       setMaterials(await materialService.getAll())
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить материалы.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось загрузить материалы.'))
     } finally {
       setLoading(false)
     }
@@ -57,8 +73,24 @@ export function MaterialsPage() {
     void loadMaterials()
   }, [])
 
+  function startEdit(material: MaterialDto) {
+    if (!canManageMaterials) {
+      return
+    }
+
+    setEditingId(material.id)
+    setForm({
+      name: material.name,
+      unit: material.unit,
+    })
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!canManageMaterials) {
+      return
+    }
+
     setSubmitting(true)
     setError('')
     setMessage('')
@@ -76,13 +108,17 @@ export function MaterialsPage() {
       setEditingId(null)
       await loadMaterials()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось сохранить материал.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось сохранить материал.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDelete(material: MaterialDto) {
+    if (!canManageMaterials) {
+      return
+    }
+
     const shouldContinue = await confirm({
       title: 'Удаление материала',
       message: `Удалить материал "${material.name}"?`,
@@ -98,7 +134,7 @@ export function MaterialsPage() {
       setMessage(`Материал "${material.name}" удалён.`)
       await loadMaterials()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось удалить материал.')
+      setError(getReadableErrorMessage(requestError, 'Не удалось удалить материал.'))
     }
   }
 
@@ -109,59 +145,67 @@ export function MaterialsPage() {
         <p className="eyebrow">Склад и расход</p>
         <h2>Материалы</h2>
         <p className="section-description">
-          Справочник материалов для пополнения каталога расходников и привязки норм расхода к услугам.
+          Справочник материалов для каталога расходников и норм списания. Управление доступно
+          администратору, остальные роли работают в режиме просмотра.
         </p>
       </div>
 
       {message ? <div className="alert alert-success">{message}</div> : null}
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      <form className="card-form card-form-grid" onSubmit={handleSubmit}>
-        <label className="field">
-          <span>Название материала</span>
-          <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Шампунь для бороды" required />
-        </label>
-        <label className="field">
-          <span>Единица измерения</span>
-          <select value={form.unit} onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))}>
-            {materialUnitOptions.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="button-row field-wide">
-          <button type="submit" className="primary-button" disabled={submitting}>
-            {submitting ? 'Сохраняем...' : editingId ? 'Обновить материал' : 'Создать материал'}
-          </button>
-          {editingId ? (
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                setEditingId(null)
-                setForm(initialForm)
-              }}
+      {canManageMaterials ? (
+        <form className="card-form card-form-grid" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Название материала</span>
+            <input
+              value={form.name}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Шампунь для бороды"
+              required
+            />
+          </label>
+          <label className="field">
+            <span>Единица измерения</span>
+            <select
+              value={form.unit}
+              onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))}
             >
-              Сбросить редактирование
+              {materialUnitOptions.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="button-row field-wide">
+            <button type="submit" className="primary-button" disabled={submitting}>
+              {submitting ? 'Сохраняем...' : editingId ? 'Обновить материал' : 'Создать материал'}
             </button>
-          ) : null}
+            {editingId ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setEditingId(null)
+                  setForm(initialForm)
+                }}
+              >
+                Сбросить редактирование
+              </button>
+            ) : null}
+          </div>
+        </form>
+      ) : (
+        <div className="filter-card">
+          <div className="report-note">
+            Для вашей роли доступен просмотр материалов без изменения справочника.
+          </div>
         </div>
-      </form>
+      )}
 
       <DataTable
         caption={loading ? 'Загружаем материалы...' : 'Справочник материалов'}
-        columns={materialColumns(
-          (material) => {
-            setEditingId(material.id)
-            setForm({
-              name: material.name,
-              unit: material.unit,
-            })
-          },
-          handleDelete,
-        )}
+        columns={materialColumns}
         rows={materials}
         emptyText="Материалы пока отсутствуют."
       />

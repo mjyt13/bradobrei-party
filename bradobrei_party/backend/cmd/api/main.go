@@ -75,7 +75,7 @@ func main() {
 		&models.User{}, &models.EmployeeProfile{}, &models.Salon{},
 		&models.Service{}, &models.Material{}, &models.ServiceMaterial{},
 		&models.Inventory{}, &models.MaterialExpense{}, &models.ServiceUsage{}, &models.Booking{}, &models.BookingItem{},
-		&models.Payment{}, &models.Review{},
+		&models.Payment{}, &models.Review{}, &models.ErrorLog{},
 	); err != nil {
 		log.Fatal("Ошибка миграции:", err)
 	}
@@ -86,6 +86,7 @@ func main() {
 	salonRepo := repository.NewSalonRepository(db)
 	invRepo := repository.NewInventoryRepository(db)
 	reportRepo := repository.NewReportRepository(db)
+	errorLogRepo := repository.NewErrorLogRepository(db)
 	serviceRepo := repository.NewServiceRepository(db)
 	materialRepo := repository.NewMaterialRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
@@ -99,6 +100,7 @@ func main() {
 	}
 	salonSvc := services.NewSalonService(salonRepo, geoCoder)
 	reportSvc := services.NewReportService(reportRepo)
+	errorLogSvc := services.NewErrorLogService(errorLogRepo)
 	serviceSvc := services.NewServiceService(serviceRepo, employeeRepo, invRepo, db)
 	materialSvc := services.NewMaterialService(materialRepo)
 	materialExpenseSvc := services.NewMaterialExpenseService(db)
@@ -116,6 +118,7 @@ func main() {
 
 	reportH := handlers.NewReportHandler(reportSvc)
 	reportFileH := handlers.NewReportFileHandler(reportSvc, reportRenderer)
+	errorLogH := handlers.NewErrorLogHandler(errorLogSvc)
 	reviewH := handlers.NewReviewHandler(db)
 	serviceH := handlers.NewServiceHandler(serviceSvc)
 	materialH := handlers.NewMaterialHandler(materialSvc)
@@ -131,6 +134,7 @@ func main() {
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.RecoveryWithLog())
 	r.Use(middleware.ErrorLogger())
+	r.Use(middleware.ErrorJournal(db))
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -250,6 +254,7 @@ func main() {
 			bookings.GET("/my", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.GetMy)
 			bookings.GET("/master", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster, models.RoleAdmin), bookingH.GetByMaster)
 			bookings.GET("/:id", bookingH.GetByID)
+			bookings.DELETE("/:id", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.Delete)
 			bookings.POST("/:id/confirm", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster, models.RoleAdmin), bookingH.Confirm)
 			bookings.POST("/:id/cancel", bookingH.Cancel)
 		}
@@ -266,6 +271,12 @@ func main() {
 			payments.GET("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager), paymentH.GetAll)
 			payments.GET("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager), paymentH.GetByID)
 			payments.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant), paymentH.Create)
+		}
+
+		errorLogs := api.Group("/error-logs")
+		errorLogs.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleHR, models.RoleAccountant, models.RoleNetworkManager))
+		{
+			errorLogs.GET("", errorLogH.GetAll)
 		}
 
 		reports := api.Group("/reports")

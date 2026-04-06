@@ -29,7 +29,6 @@ func NewBookingService(
 	}
 }
 
-// Create — создание бронирования с полной валидацией по ТЗ.
 func (s *BookingService) Create(req dto.CreateBookingRequest, clientID uint) (*models.Booking, error) {
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
@@ -52,7 +51,7 @@ func (s *BookingService) Create(req dto.CreateBookingRequest, clientID uint) (*m
 	}
 
 	if totalDuration < 60 {
-		return nil, errors.New("минимальная длительность бронирования — 60 минут")
+		return nil, errors.New("минимальная длительность бронирования - 60 минут")
 	}
 
 	if req.MasterID != nil {
@@ -93,7 +92,6 @@ func (s *BookingService) Create(req dto.CreateBookingRequest, clientID uint) (*m
 	return booking, nil
 }
 
-// Confirm — подтверждение + списание материалов.
 func (s *BookingService) Confirm(bookingID uint, masterID uint) (*models.Booking, error) {
 	booking, err := s.bookingRepo.GetByID(bookingID)
 	if err != nil {
@@ -123,7 +121,6 @@ func (s *BookingService) Confirm(bookingID uint, masterID uint) (*models.Booking
 	return booking, nil
 }
 
-// Cancel — отмена бронирования.
 func (s *BookingService) Cancel(bookingID uint, requesterID uint, requesterRole models.UserRole) error {
 	booking, err := s.bookingRepo.GetByID(bookingID)
 	if err != nil {
@@ -139,6 +136,23 @@ func (s *BookingService) Cancel(bookingID uint, requesterID uint, requesterRole 
 	}
 
 	return s.bookingRepo.UpdateStatus(bookingID, models.BookingCancelled)
+}
+
+func (s *BookingService) Delete(bookingID uint, requesterID uint, requesterRole models.UserRole) error {
+	booking, err := s.bookingRepo.GetByID(bookingID)
+	if err != nil {
+		return errors.New("бронирование не найдено")
+	}
+
+	if requesterRole == models.RoleClient && booking.ClientID != requesterID {
+		return errors.New("нет прав для удаления этого бронирования")
+	}
+
+	if requesterRole != models.RoleClient && requesterRole != models.RoleAdmin {
+		return errors.New("нет прав для удаления бронирования")
+	}
+
+	return s.bookingRepo.Delete(bookingID)
 }
 
 func (s *BookingService) GetByID(id uint) (*models.Booking, error) {

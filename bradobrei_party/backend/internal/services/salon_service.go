@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,21 +21,21 @@ func NewSalonService(salonRepo *repository.SalonRepository, g geocoder.Geocoder)
 	return &SalonService{salonRepo: salonRepo, geocoder: g}
 }
 
-// GeocoderEnabled — true, если настроен серверный геокодер (ключи не в браузере).
 func (s *SalonService) GeocoderEnabled() bool {
 	return s.geocoder != nil
 }
 
-// GeocodeAddress вызывает внешний Geocoder API на сервере (Salon Service / валидация адреса).
 func (s *SalonService) GeocodeAddress(ctx context.Context, address string) (dto.GeocodeAddressResponse, error) {
 	var out dto.GeocodeAddressResponse
 	if s.geocoder == nil {
 		return out, fmt.Errorf("геокодер не настроен")
 	}
+
 	res, err := s.geocoder.Geocode(ctx, strings.TrimSpace(address))
 	if err != nil {
 		return out, err
 	}
+
 	out.Latitude = res.Lat
 	out.Longitude = res.Lon
 	out.FormattedAddress = res.FormattedAddress
@@ -88,14 +87,17 @@ func (s *SalonService) applyServerGeocoding(ctx context.Context, salon *models.S
 	if s.geocoder == nil {
 		return nil
 	}
+
 	addr := strings.TrimSpace(salon.Address)
 	if addr == "" {
 		return fmt.Errorf("укажите адрес салона для проверки геокодером")
 	}
+
 	res, err := s.geocoder.Geocode(ctx, addr)
 	if err != nil {
 		return fmt.Errorf("геокодирование адреса: %w", err)
 	}
+
 	wkt := fmt.Sprintf("POINT(%g %g)", res.Lon, res.Lat)
 	salon.Location = &wkt
 	return nil
@@ -134,24 +136,12 @@ func normalizeSalonWorkingHours(salon *models.Salon) error {
 		return nil
 	}
 
-	raw := strings.TrimSpace(*salon.WorkingHours)
-	if raw == "" {
-		salon.WorkingHours = nil
-		return nil
-	}
-
-	var hours map[string]string
-	if err := json.Unmarshal([]byte(raw), &hours); err != nil {
-		return fmt.Errorf("working_hours должен быть корректным JSON-объектом вида {\"mon\":\"10:00-20:00\"}")
-	}
-
-	normalized, err := json.Marshal(hours)
+	normalized, err := normalizeScheduleJSON(*salon.WorkingHours, "working_hours")
 	if err != nil {
-		return fmt.Errorf("не удалось нормализовать working_hours")
+		return err
 	}
 
-	value := string(normalized)
-	salon.WorkingHours = &value
+	salon.WorkingHours = normalized
 	return nil
 }
 
@@ -192,16 +182,16 @@ func normalizeLatLonPair(raw string) (string, error) {
 	cleaned := strings.NewReplacer(",", " ", ";", " ").Replace(raw)
 	parts := strings.Fields(cleaned)
 	if len(parts) != 2 {
-		return "", fmt.Errorf("Координаты должны содержать широту и долготу")
+		return "", fmt.Errorf("координаты должны содержать широту и долготу")
 	}
 
 	lat, err := strconv.ParseFloat(parts[0], 64)
 	if err != nil {
-		return "", fmt.Errorf("Не удалось разобрать широту")
+		return "", fmt.Errorf("не удалось разобрать широту")
 	}
 	lon, err := strconv.ParseFloat(parts[1], 64)
 	if err != nil {
-		return "", fmt.Errorf("Не удалось разобрать долготу")
+		return "", fmt.Errorf("не удалось разобрать долготу")
 	}
 
 	if err := validateLatLon(lat, lon); err != nil {

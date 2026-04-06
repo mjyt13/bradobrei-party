@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ConfirmState {
   title: string
@@ -29,6 +30,30 @@ export function useConfirmDialog() {
   const [open, setOpen] = useState(false)
   const resolverRef = useRef<((value: boolean) => void) | null>(null)
 
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        resolverRef.current?.(false)
+        resolverRef.current = null
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
   function close(value: boolean) {
     setOpen(false)
     resolverRef.current?.(value)
@@ -50,7 +75,7 @@ export function useConfirmDialog() {
     })
   }
 
-  const dialog = open ? (
+  const dialogContent = open ? (
     <div className="modal-backdrop" role="presentation" onClick={() => close(false)}>
       <div
         className="modal-dialog"
@@ -78,6 +103,8 @@ export function useConfirmDialog() {
       </div>
     </div>
   ) : null
+
+  const dialog = dialogContent ? createPortal(dialogContent, document.body) : null
 
   return { confirm, dialog }
 }
