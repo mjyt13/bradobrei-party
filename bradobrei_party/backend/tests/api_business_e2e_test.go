@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"bradobrei/backend/internal/models"
@@ -60,6 +61,17 @@ func TestBookingAccessAndFlow(t *testing.T) {
 		t.Fatalf("expected 200 from /bookings/master, got %d: %s", status, string(body))
 	}
 	app.saveArtifact(t, "booking_master_list", body)
+
+	status, body = app.request(t, http.MethodDelete, fmt.Sprintf("/api/v1/bookings/%d", bookingID), adminToken, nil)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for booking delete, got %d: %s", status, string(body))
+	}
+	app.saveArtifact(t, "booking_delete", body)
+
+	status, body = app.request(t, http.MethodGet, fmt.Sprintf("/api/v1/bookings/%d", bookingID), adminToken, nil)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 after booking delete, got %d: %s", status, string(body))
+	}
 }
 
 func TestPaymentAccessAndFlow(t *testing.T) {
@@ -371,6 +383,27 @@ func TestReportsAccessAndFlow(t *testing.T) {
 	}
 	app.saveArtifact(t, "report_financial_summary", body)
 
+	htmlReports := []string{
+		"/api/v1/reports/employees/html",
+		fmt.Sprintf("/api/v1/reports/salon-activity/html?from=%s&to=%s", from, to),
+		fmt.Sprintf("/api/v1/reports/service-popularity/html?from=%s&to=%s", from, to),
+		fmt.Sprintf("/api/v1/reports/master-activity/html?from=%s&to=%s", from, to),
+		"/api/v1/reports/reviews/html",
+		fmt.Sprintf("/api/v1/reports/inventory-movement/html?from=%s&to=%s&salon_id=%d", from, to, app.baseSalonID),
+		fmt.Sprintf("/api/v1/reports/client-loyalty/html?from=%s&to=%s", from, to),
+		fmt.Sprintf("/api/v1/reports/cancelled-bookings/html?from=%s&to=%s", from, to),
+		fmt.Sprintf("/api/v1/reports/financial-summary/html?from=%s&to=%s&salon_id=%d", from, to, app.baseSalonID),
+	}
+	for _, path := range htmlReports {
+		status, body = app.request(t, http.MethodGet, path, adminToken, nil)
+		if status != http.StatusOK {
+			t.Fatalf("expected 200 for html report %s, got %d: %s", path, status, string(body))
+		}
+		if !looksLikeReportHTML(body) {
+			t.Fatalf("expected html report body for %s, got: %s", path, string(body))
+		}
+	}
+
 	status, body = app.request(t, http.MethodGet, fmt.Sprintf("/api/v1/reviews/%d", reviewID), adminToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("expected 200 for review get by id, got %d: %s", status, string(body))
@@ -546,4 +579,11 @@ func createReviewAsClient(t *testing.T, app *testApp, clientToken string) uint {
 
 	app.saveArtifact(t, "review_create", body)
 	return resp.ID
+}
+
+func looksLikeReportHTML(body []byte) bool {
+	html := string(body)
+	return strings.Contains(html, "<!doctype html>") ||
+		strings.Contains(html, "<html") ||
+		strings.Contains(html, "report.css")
 }

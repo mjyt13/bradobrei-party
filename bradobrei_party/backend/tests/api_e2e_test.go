@@ -86,6 +86,22 @@ func TestEmployeeAccessAndCrudFlow(t *testing.T) {
 		t.Fatalf("expected 400 for invalid employee update, got %d: %s", status, string(body))
 	}
 
+	badSalaryPatch := map[string]any{
+		"expected_salary": 0,
+	}
+	status, body = app.request(t, http.MethodPatch, fmt.Sprintf("/api/v1/employees/%d", employeeID), adminToken, badSalaryPatch)
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for zero employee salary, got %d: %s", status, string(body))
+	}
+
+	badSchedulePatch := map[string]any{
+		"work_schedule": `{"mon":"letters-instead-of-time"}`,
+	}
+	status, body = app.request(t, http.MethodPatch, fmt.Sprintf("/api/v1/employees/%d", employeeID), adminToken, badSchedulePatch)
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid employee schedule, got %d: %s", status, string(body))
+	}
+
 	patchPayload := map[string]any{
 		"full_name":       "Иван Барбер Обновлённый",
 		"expected_salary": 95000,
@@ -137,6 +153,20 @@ func TestSalonAccessAndCrudFlow(t *testing.T) {
 	status, body = app.request(t, http.MethodPost, "/api/v1/salons", adminToken, badSalonPayload)
 	if status != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid salon payload, got %d: %s", status, string(body))
+	}
+
+	badScheduleSalonPayload := map[string]any{
+		"name":             "Плохой график",
+		"address":          "Пермь",
+		"location":         "58.0141, 56.2230",
+		"working_hours":    `{"mon":"aa:bb-cc:dd"}`,
+		"status":           "OPEN",
+		"max_staff":        8,
+		"base_hourly_rate": 1400,
+	}
+	status, body = app.request(t, http.MethodPost, "/api/v1/salons", adminToken, badScheduleSalonPayload)
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid salon schedule, got %d: %s", status, string(body))
 	}
 
 	createSalonPayload := map[string]any{
@@ -225,7 +255,7 @@ func newTestApp(t *testing.T) *testApp {
 		&models.User{}, &models.EmployeeProfile{}, &models.Salon{},
 		&models.Service{}, &models.Material{}, &models.ServiceMaterial{},
 		&models.Inventory{}, &models.MaterialExpense{}, &models.ServiceUsage{}, &models.Booking{}, &models.BookingItem{},
-		&models.Payment{}, &models.Review{},
+		&models.Payment{}, &models.Review{}, &models.ErrorLog{},
 	); err != nil {
 		t.Fatalf("failed to migrate schema: %v", err)
 	}
@@ -279,9 +309,9 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 
 	authSvc := services.NewAuthService(userRepo)
 	bookingSvc := services.NewBookingService(bookingRepo, invRepo, db)
-	salonSvc := services.NewSalonService(salonRepo)
+	salonSvc := services.NewSalonService(salonRepo, nil)
 	reportSvc := services.NewReportService(reportRepo)
-	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo)
+	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo, db)
 	paymentSvc := services.NewPaymentService(paymentRepo, bookingRepo)
 	serviceSvc := services.NewServiceService(repository.NewServiceRepository(db), employeeRepo, invRepo, db)
 	materialExpenseSvc := services.NewMaterialExpenseService(db)
@@ -348,6 +378,7 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 			bookings.GET("/my", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.GetMy)
 			bookings.GET("/master", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster, models.RoleAdmin), bookingH.GetByMaster)
 			bookings.GET("/:id", bookingH.GetByID)
+			bookings.DELETE("/:id", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.Delete)
 			bookings.POST("/:id/confirm", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster, models.RoleAdmin), bookingH.Confirm)
 			bookings.POST("/:id/cancel", bookingH.Cancel)
 		}

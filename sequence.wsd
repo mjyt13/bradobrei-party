@@ -10,8 +10,6 @@ participant "Booking Service" as BookSvc
 participant "Inventory Service" as InvSvc
 participant "Data Repository" as Repo
 database "PostgreSQL" as DB
-participant "Сервис уведомлений" as Notifier
-entity "External Mail API" as MailExt
 
 User -> Web: Нажимает "Забронировать"
 Web -> Auth: POST /api/bookings (с токеном)
@@ -44,12 +42,6 @@ group Транзакция: Бронирование и Склад
     deactivate Repo
 end
 
-BookSvc -> Notifier: sendConfirmation(clientId, bookingDetails)
-activate Notifier
-Notifier -> MailExt: POST /send (E-mail/SMS)
-MailExt --> User: "Запись создана"
-MailExt --> Notifier: 200 OK
-deactivate Notifier
 
 BookSvc --> BookCtrl: Успех (BookingDTO)
 deactivate BookSvc

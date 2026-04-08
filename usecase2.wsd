@@ -5,14 +5,10 @@ left to right direction
 
 ' 2. Сначала объявляем акторов (левая колонка)
 actor "Клиент" as Client
-actor "Сотрудник" as Staff
 actor "Мастер" as Master
 actor "Персонал" as Office
 actor "Администратор" as Admin
 
-Staff <|-- Master
-Staff <|-- Office
-Staff <|-- Admin
 
 ' 3. Группируем систему
 rectangle "Брадобрей-пати" as System {  

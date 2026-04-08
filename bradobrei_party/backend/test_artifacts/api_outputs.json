@@ -1,7 +1,7 @@
 {
   "booking_confirm": {
     "id": 1,
-    "start_time": "2026-04-06T19:19:27+05:00",
+    "start_time": "2026-04-08T08:48:30+05:00",
     "duration_minutes": 75,
     "status": "CONFIRMED",
     "total_price": 1800,
@@ -9,8 +9,8 @@
     "client_id": 3,
     "master_id": 2,
     "salon_id": 1,
-    "created_at": "2026-04-05T19:19:27.769701+05:00",
-    "updated_at": "2026-04-05T19:19:27.7843493+05:00",
+    "created_at": "2026-04-07T08:48:30.180791+05:00",
+    "updated_at": "2026-04-07T08:48:30.4669707+05:00",
     "client": {
       "id": 3,
       "username": "client_petr",
@@ -18,8 +18,8 @@
       "phone": "+79990002233",
       "email": "client_petr@example.com",
       "role": "CLIENT",
-      "created_at": "2026-04-05T19:19:27.652342+05:00",
-      "updated_at": "2026-04-05T19:19:27.652342+05:00"
+      "created_at": "2026-04-07T08:48:29.798354+05:00",
+      "updated_at": "2026-04-07T08:48:29.798354+05:00"
     },
     "salon": {
       "id": 1,
@@ -28,8 +28,8 @@
       "status": "OPEN",
       "max_staff": 5,
       "base_hourly_rate": 1200,
-      "created_at": "2026-04-05T19:19:27.016209+05:00",
-      "updated_at": "2026-04-05T19:19:27.016209+05:00"
+      "created_at": "2026-04-07T08:48:28.723584+05:00",
+      "updated_at": "2026-04-07T08:48:28.723584+05:00"
     },
     "items": [
       {
@@ -40,27 +40,27 @@
         "price_at_booking": 1800,
         "service": {
           "id": 1,
-          "name": "Service-1775398767760771400",
+          "name": "Service-1775533710146506300",
           "description": "Test service for API e2e",
           "price": 1800,
           "duration_minutes": 75,
-          "created_at": "2026-04-05T19:19:27.764343+05:00",
-          "updated_at": "2026-04-05T19:19:27.764343+05:00"
+          "created_at": "2026-04-07T08:48:30.161385+05:00",
+          "updated_at": "2026-04-07T08:48:30.161385+05:00"
         }
       }
     ]
   },
   "booking_create": {
     "id": 1,
-    "start_time": "2026-04-06T14:19:27Z",
+    "start_time": "2026-04-08T03:48:30Z",
     "duration_minutes": 75,
     "status": "PENDING",
     "total_price": 1800,
     "notes": "E2E booking scenario",
     "client_id": 3,
     "salon_id": 1,
-    "created_at": "2026-04-05T19:19:27.7697013+05:00",
-    "updated_at": "2026-04-05T19:19:27.7697013+05:00",
+    "created_at": "2026-04-07T08:48:30.1807913+05:00",
+    "updated_at": "2026-04-07T08:48:30.1807913+05:00",
     "client": {
       "id": 0,
       "username": "",
@@ -99,18 +99,21 @@
       }
     ]
   },
+  "booking_delete": {
+    "message": "Бронирование удалено"
+  },
   "booking_get_my": [
     {
       "id": 1,
-      "start_time": "2026-04-06T19:19:27+05:00",
+      "start_time": "2026-04-08T08:48:30+05:00",
       "duration_minutes": 75,
       "status": "PENDING",
       "total_price": 1800,
       "notes": "E2E booking scenario",
       "client_id": 3,
       "salon_id": 1,
-      "created_at": "2026-04-05T19:19:27.769701+05:00",
-      "updated_at": "2026-04-05T19:19:27.769701+05:00",
+      "created_at": "2026-04-07T08:48:30.180791+05:00",
+      "updated_at": "2026-04-07T08:48:30.180791+05:00",
       "client": {
         "id": 0,
         "username": "",
@@ -127,8 +130,8 @@
         "status": "OPEN",
         "max_staff": 5,
         "base_hourly_rate": 1200,
-        "created_at": "2026-04-05T19:19:27.016209+05:00",
-        "updated_at": "2026-04-05T19:19:27.016209+05:00"
+        "created_at": "2026-04-07T08:48:28.723584+05:00",
+        "updated_at": "2026-04-07T08:48:28.723584+05:00"
       },
       "items": [
         {
@@ -139,12 +142,12 @@
           "price_at_booking": 1800,
           "service": {
             "id": 1,
-            "name": "Service-1775398767760771400",
+            "name": "Service-1775533710146506300",
             "description": "Test service for API e2e",
             "price": 1800,
             "duration_minutes": 75,
-            "created_at": "2026-04-05T19:19:27.764343+05:00",
-            "updated_at": "2026-04-05T19:19:27.764343+05:00"
+            "created_at": "2026-04-07T08:48:30.161385+05:00",
+            "updated_at": "2026-04-07T08:48:30.161385+05:00"
           }
         }
       ]
@@ -153,7 +156,7 @@
   "booking_master_list": [
     {
       "id": 1,
-      "start_time": "2026-04-06T19:19:27+05:00",
+      "start_time": "2026-04-08T08:48:30+05:00",
       "duration_minutes": 75,
       "status": "CONFIRMED",
       "total_price": 1800,
@@ -161,8 +164,8 @@
       "client_id": 3,
       "master_id": 2,
       "salon_id": 1,
-      "created_at": "2026-04-05T19:19:27.769701+05:00",
-      "updated_at": "2026-04-05T19:19:27.784349+05:00",
+      "created_at": "2026-04-07T08:48:30.180791+05:00",
+      "updated_at": "2026-04-07T08:48:30.46697+05:00",
       "client": {
         "id": 3,
         "username": "client_petr",
@@ -170,8 +173,8 @@
         "phone": "+79990002233",
         "email": "client_petr@example.com",
         "role": "CLIENT",
-        "created_at": "2026-04-05T19:19:27.652342+05:00",
-        "updated_at": "2026-04-05T19:19:27.652342+05:00"
+        "created_at": "2026-04-07T08:48:29.798354+05:00",
+        "updated_at": "2026-04-07T08:48:29.798354+05:00"
       },
       "salon": {
         "id": 1,
@@ -180,8 +183,8 @@
         "status": "OPEN",
         "max_staff": 5,
         "base_hourly_rate": 1200,
-        "created_at": "2026-04-05T19:19:27.016209+05:00",
-        "updated_at": "2026-04-05T19:19:27.016209+05:00"
+        "created_at": "2026-04-07T08:48:28.723584+05:00",
+        "updated_at": "2026-04-07T08:48:28.723584+05:00"
       },
       "items": [
         {
@@ -192,12 +195,12 @@
           "price_at_booking": 1800,
           "service": {
             "id": 1,
-            "name": "Service-1775398767760771400",
+            "name": "Service-1775533710146506300",
             "description": "Test service for API e2e",
             "price": 1800,
             "duration_minutes": 75,
-            "created_at": "2026-04-05T19:19:27.764343+05:00",
-            "updated_at": "2026-04-05T19:19:27.764343+05:00"
+            "created_at": "2026-04-07T08:48:30.161385+05:00",
+            "updated_at": "2026-04-07T08:48:30.161385+05:00"
           }
         }
       ]
@@ -209,8 +212,8 @@
     "specialization": "Fade, beard styling",
     "expected_salary": 85000,
     "work_schedule": "{\"mon\": \"10:00-19:00\", \"wed\": \"10:00-19:00\"}",
-    "created_at": "2026-04-05T19:19:32.969329+05:00",
-    "updated_at": "2026-04-05T19:19:32.969329+05:00",
+    "created_at": "2026-04-07T08:48:43.126032+05:00",
+    "updated_at": "2026-04-07T08:48:43.126032+05:00",
     "user": {
       "id": 2,
       "username": "worker_ivan",
@@ -218,8 +221,8 @@
       "phone": "+79990001122",
       "email": "worker.ivan@example.com",
       "role": "ADVANCED_MASTER",
-      "created_at": "2026-04-05T19:19:32.969329+05:00",
-      "updated_at": "2026-04-05T19:19:32.969329+05:00"
+      "created_at": "2026-04-07T08:48:43.126032+05:00",
+      "updated_at": "2026-04-07T08:48:43.126032+05:00"
     },
     "salons": [
       {
@@ -229,8 +232,8 @@
         "status": "OPEN",
         "max_staff": 5,
         "base_hourly_rate": 1200,
-        "created_at": "2026-04-05T19:19:32.662663+05:00",
-        "updated_at": "2026-04-05T19:19:32.662663+05:00"
+        "created_at": "2026-04-07T08:48:42.362962+05:00",
+        "updated_at": "2026-04-07T08:48:42.362962+05:00"
       }
     ]
   },
@@ -240,8 +243,8 @@
     "specialization": "Fade, beard styling",
     "expected_salary": 95000,
     "work_schedule": "{\"mon\": \"10:00-19:00\", \"wed\": \"10:00-19:00\"}",
-    "created_at": "2026-04-05T19:19:32.208104+05:00",
-    "updated_at": "2026-04-05T19:19:32.413839+05:00",
+    "created_at": "2026-04-07T08:48:41.339856+05:00",
+    "updated_at": "2026-04-07T08:48:41.869161+05:00",
     "user": {
       "id": 2,
       "username": "worker_ivan",
@@ -249,8 +252,8 @@
       "phone": "+79990001122",
       "email": "worker.ivan@example.com",
       "role": "ADVANCED_MASTER",
-      "created_at": "2026-04-05T19:19:32.204359+05:00",
-      "updated_at": "2026-04-05T19:19:32.412253+05:00"
+      "created_at": "2026-04-07T08:48:41.339856+05:00",
+      "updated_at": "2026-04-07T08:48:41.865662+05:00"
     },
     "salons": [
       {
@@ -260,8 +263,8 @@
         "status": "OPEN",
         "max_staff": 5,
         "base_hourly_rate": 1200,
-        "created_at": "2026-04-05T19:19:31.768447+05:00",
-        "updated_at": "2026-04-05T19:19:31.768447+05:00"
+        "created_at": "2026-04-07T08:48:40.202299+05:00",
+        "updated_at": "2026-04-07T08:48:40.202299+05:00"
       }
     ]
   },
@@ -271,7 +274,7 @@
       "salon_id": 1,
       "material_id": 1,
       "quantity": 25,
-      "last_updated": "2026-04-05T19:19:29.038809+05:00",
+      "last_updated": "2026-04-07T08:48:34.065217+05:00",
       "salon": {
         "id": 0,
         "name": "",
@@ -284,7 +287,7 @@
       },
       "material": {
         "id": 1,
-        "name": "Material-1775398769030544900",
+        "name": "Material-1775533714046983500",
         "unit": "ml"
       }
     }
@@ -294,7 +297,7 @@
     "salon_id": 1,
     "material_id": 1,
     "quantity": 40,
-    "last_updated": "2026-04-05T19:19:29.044473+05:00",
+    "last_updated": "2026-04-07T08:48:34.076038+05:00",
     "salon": {
       "id": 0,
       "name": "",
@@ -307,7 +310,7 @@
     },
     "material": {
       "id": 1,
-      "name": "Material-1775398769030544900",
+      "name": "Material-1775533714046983500",
       "unit": "ml"
     }
   },
@@ -317,11 +320,11 @@
     "salon_id": 1,
     "purchase_price": 350,
     "quantity": 5,
-    "created_at": "2026-04-05T19:19:29.037234+05:00",
-    "updated_at": "2026-04-05T19:19:29.037234+05:00",
+    "created_at": "2026-04-07T08:48:34.06168+05:00",
+    "updated_at": "2026-04-07T08:48:34.06168+05:00",
     "material": {
       "id": 1,
-      "name": "Material-1775398769030544900",
+      "name": "Material-1775533714046983500",
       "unit": "ml"
     },
     "salon": {
@@ -331,8 +334,8 @@
       "status": "OPEN",
       "max_staff": 5,
       "base_hourly_rate": 1200,
-      "created_at": "2026-04-05T19:19:28.637049+05:00",
-      "updated_at": "2026-04-05T19:19:28.637049+05:00"
+      "created_at": "2026-04-07T08:48:33.255649+05:00",
+      "updated_at": "2026-04-07T08:48:33.255649+05:00"
     }
   },
   "payment_create": {
@@ -341,8 +344,8 @@
     "amount": 1800,
     "status": "SUCCESS",
     "external_transaction_id": "txn_test_success_001",
-    "created_at": "2026-04-05T19:19:28.4228616+05:00",
-    "completed_at": "2026-04-05T19:19:28.4223573+05:00"
+    "created_at": "2026-04-07T08:48:32.4576034+05:00",
+    "completed_at": "2026-04-07T08:48:32.4576034+05:00"
   },
   "payment_get": {
     "id": 1,
@@ -350,14 +353,14 @@
     "amount": 1800,
     "status": "SUCCESS",
     "external_transaction_id": "txn_test_success_001",
-    "created_at": "2026-04-05T19:19:28.422861+05:00",
-    "completed_at": "2026-04-05T19:19:28.422357+05:00"
+    "created_at": "2026-04-07T08:48:32.457603+05:00",
+    "completed_at": "2026-04-07T08:48:32.457603+05:00"
   },
   "report_cancelled_bookings": {
     "data": [
       {
         "booking_id": 2,
-        "planned_visit": "2026-04-07T21:19:29+05:00",
+        "planned_visit": "2026-04-09T10:48:35+05:00",
         "client_full_name": "Test Client",
         "master_full_name": "Не назначен",
         "cancellation_reason": "E2E booking scenario",
@@ -366,8 +369,8 @@
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "cancelled_bookings"
   },
@@ -378,16 +381,16 @@
         "full_name": "Test Client",
         "phone": "+79990002233",
         "email": "client_maria@example.com",
-        "first_visit": "2026-04-07T19:19:29+05:00",
-        "last_visit": "2026-04-07T19:19:29+05:00",
+        "first_visit": "2026-04-09T08:48:35+05:00",
+        "last_visit": "2026-04-09T08:48:35+05:00",
         "visit_count": 1,
         "paid_total": 0,
         "bonus_status": "BASIC"
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "client_loyalty"
   },
@@ -399,8 +402,8 @@
         "full_name": "Администратор Системы",
         "phone": "+79990000000",
         "role": "ADMINISTRATOR",
-        "created_at": "2026-04-05T19:19:29.381426+05:00",
-        "updated_at": "2026-04-05T19:19:29.381426+05:00"
+        "created_at": "2026-04-07T08:48:34.700453+05:00",
+        "updated_at": "2026-04-07T08:48:34.700453+05:00"
       },
       {
         "id": 2,
@@ -409,16 +412,16 @@
         "phone": "+79990001122",
         "email": "worker.ivan@example.com",
         "role": "ADVANCED_MASTER",
-        "created_at": "2026-04-05T19:19:29.619781+05:00",
-        "updated_at": "2026-04-05T19:19:29.619781+05:00",
+        "created_at": "2026-04-07T08:48:35.097828+05:00",
+        "updated_at": "2026-04-07T08:48:35.097828+05:00",
         "employee_profile": {
           "id": 1,
           "user_id": 2,
           "specialization": "Fade, beard styling",
           "expected_salary": 85000,
           "work_schedule": "{\"mon\": \"10:00-19:00\", \"wed\": \"10:00-19:00\"}",
-          "created_at": "2026-04-05T19:19:29.619781+05:00",
-          "updated_at": "2026-04-05T19:19:29.619781+05:00",
+          "created_at": "2026-04-07T08:48:35.099198+05:00",
+          "updated_at": "2026-04-07T08:48:35.099198+05:00",
           "user": {
             "id": 0,
             "username": "",
@@ -436,8 +439,8 @@
               "status": "OPEN",
               "max_staff": 5,
               "base_hourly_rate": 1200,
-              "created_at": "2026-04-05T19:19:29.291664+05:00",
-              "updated_at": "2026-04-05T19:19:29.291664+05:00"
+              "created_at": "2026-04-07T08:48:34.509933+05:00",
+              "updated_at": "2026-04-07T08:48:34.509933+05:00"
             }
           ]
         }
@@ -448,8 +451,8 @@
   "report_financial_summary": {
     "data": null,
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "financial_summary"
   },
@@ -458,7 +461,7 @@
       {
         "salon_id": 1,
         "salon_address": "Екатеринбург",
-        "material_name": "Material-1775398769889412500",
+        "material_name": "Material-1775533715594566700",
         "unit": "ml",
         "opening_balance": 20,
         "purchased": 0,
@@ -467,8 +470,8 @@
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "inventory_movement"
   },
@@ -483,8 +486,8 @@
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "master_activity"
   },
@@ -495,7 +498,7 @@
         "user_id": 3,
         "text": "Отличный тестовый отзыв",
         "rating": 5,
-        "created_at": "2026-04-05T19:19:29.9127+05:00",
+        "created_at": "2026-04-07T08:48:35.640743+05:00",
         "user": {
           "id": 3,
           "username": "client_maria",
@@ -503,14 +506,14 @@
           "phone": "+79990002233",
           "email": "client_maria@example.com",
           "role": "CLIENT",
-          "created_at": "2026-04-05T19:19:29.804529+05:00",
-          "updated_at": "2026-04-05T19:19:29.804529+05:00"
+          "created_at": "2026-04-07T08:48:35.440132+05:00",
+          "updated_at": "2026-04-07T08:48:35.440132+05:00"
         }
       }
     ],
     "period": {
-      "from": "2026-03-05T19:19:29.9250419+05:00",
-      "to": "2026-04-05T19:19:29.9250419+05:00"
+      "from": "2026-03-07T08:48:35.6707694+05:00",
+      "to": "2026-04-07T08:48:35.6707694+05:00"
     },
     "report": "reviews"
   },
@@ -525,8 +528,8 @@
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "salon_activity"
   },
@@ -534,14 +537,14 @@
     "data": [
       {
         "service_id": 1,
-        "service_name": "Service-1775398769889412500",
+        "service_name": "Service-1775533715594566700",
         "usage_count": 2,
         "relative_freq": 2
       }
     ],
     "period": {
-      "from": "2026-04-06T00:00:00Z",
-      "to": "2026-04-10T00:00:00Z"
+      "from": "2026-04-08T00:00:00Z",
+      "to": "2026-04-12T00:00:00Z"
     },
     "report": "service_popularity"
   },
@@ -550,7 +553,7 @@
     "user_id": 2,
     "text": "Отличный тестовый отзыв",
     "rating": 5,
-    "created_at": "2026-04-05T19:19:30.8061759+05:00",
+    "created_at": "2026-04-07T08:48:38.0220477+05:00",
     "user": {
       "id": 0,
       "username": "",
@@ -566,7 +569,7 @@
     "user_id": 3,
     "text": "Отличный тестовый отзыв",
     "rating": 5,
-    "created_at": "2026-04-05T19:19:29.9127+05:00",
+    "created_at": "2026-04-07T08:48:35.640743+05:00",
     "user": {
       "id": 3,
       "username": "client_maria",
@@ -574,8 +577,8 @@
       "phone": "+79990002233",
       "email": "client_maria@example.com",
       "role": "CLIENT",
-      "created_at": "2026-04-05T19:19:29.804529+05:00",
-      "updated_at": "2026-04-05T19:19:29.804529+05:00"
+      "created_at": "2026-04-07T08:48:35.440132+05:00",
+      "updated_at": "2026-04-07T08:48:35.440132+05:00"
     }
   },
   "review_get_by_id": {
@@ -583,7 +586,7 @@
     "user_id": 2,
     "text": "Отличный тестовый отзыв",
     "rating": 5,
-    "created_at": "2026-04-05T19:19:30.806175+05:00",
+    "created_at": "2026-04-07T08:48:38.022047+05:00",
     "user": {
       "id": 2,
       "username": "client_review",
@@ -591,8 +594,8 @@
       "phone": "+79990002233",
       "email": "client_review@example.com",
       "role": "CLIENT",
-      "created_at": "2026-04-05T19:19:30.530845+05:00",
-      "updated_at": "2026-04-05T19:19:30.530845+05:00"
+      "created_at": "2026-04-07T08:48:36.987839+05:00",
+      "updated_at": "2026-04-07T08:48:36.987839+05:00"
     }
   },
   "review_list": [
@@ -601,7 +604,7 @@
       "user_id": 2,
       "text": "Отличный тестовый отзыв",
       "rating": 5,
-      "created_at": "2026-04-05T19:19:30.806175+05:00",
+      "created_at": "2026-04-07T08:48:38.022047+05:00",
       "user": {
         "id": 2,
         "username": "client_review",
@@ -609,8 +612,8 @@
         "phone": "+79990002233",
         "email": "client_review@example.com",
         "role": "CLIENT",
-        "created_at": "2026-04-05T19:19:30.530845+05:00",
-        "updated_at": "2026-04-05T19:19:30.530845+05:00"
+        "created_at": "2026-04-07T08:48:36.987839+05:00",
+        "updated_at": "2026-04-07T08:48:36.987839+05:00"
       }
     }
   ],
@@ -619,24 +622,28 @@
     "name": "Золотые руки",
     "address": "Пермь",
     "location": "POINT(56.223 58.0141)",
+    "latitude": 58.0141,
+    "longitude": 56.223,
     "working_hours": "{\"mon\":\"10:00-20:00\",\"tue\":\"10:00-20:00\"}",
     "status": "OPEN",
     "max_staff": 8,
     "base_hourly_rate": 1400,
-    "created_at": "2026-04-05T19:19:33.1748303+05:00",
-    "updated_at": "2026-04-05T19:19:33.1748303+05:00"
+    "created_at": "2026-04-07T08:48:43.567208+05:00",
+    "updated_at": "2026-04-07T08:48:43.567208+05:00"
   },
   "salon_update": {
     "id": 2,
     "name": "Золотые руки Плюс",
     "address": "Пермь, центр",
     "location": "POINT(56.223 58.0141)",
+    "latitude": 58.0141,
+    "longitude": 56.223,
     "working_hours": "{\"mon\":\"09:00-21:00\",\"tue\":\"09:00-21:00\"}",
     "status": "OPEN",
     "max_staff": 10,
     "base_hourly_rate": 1700,
-    "created_at": "2026-04-05T19:19:33.17483+05:00",
-    "updated_at": "2026-04-05T19:19:33.1796763+05:00"
+    "created_at": "2026-04-07T08:48:43.567208+05:00",
+    "updated_at": "2026-04-07T08:48:43.6505812+05:00"
   },
   "service_use": {
     "message": "Материалы по услуге списаны"

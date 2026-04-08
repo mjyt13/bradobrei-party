@@ -26,32 +26,21 @@ System_Boundary(platform, "Информационная система 'Брад
     Container(api, "Backend API Application", "Java / Python / Go", "Бизнес-логика, авторизация (RBAC), API Gateway, валидация данных.")
 
     ContainerDb(db, "Центральная БД", "PostgreSQL + PostGIS", "Хранение данных о транзакциях, пользователях и гео-позициях салонов.")
-
-    Container(mq, "Очередь сообщений", "Redis / RabbitMQ", "Асинхронный буфер для тяжелых задач (генерация PDF, рассылки).")
-
-    Container(worker, "Сервис отчетов (Worker)", "Go / Python", "Фоновая генерация аналитики и PDF-документов.")
 }
 
 ' Внешние системы
-System_Ext(geo_visual, "Картографический сервис (UI)", "Yandex/Google SDK", "Визуальное отображение карт и тайлов в браузере.")
 System_Ext(geo_logic, "Геокодер (API)", "Yandex/Google API", "Серверная валидация адресов и координат.")
-System_Ext(payment, "Платежный шлюз", "Провайдер оплаты", "Проведение онлайн-платежей.")
-System_Ext(notif, "Сервис уведомлений", "SMS/Email/Push", "Оповещение клиентов о записях.")
+System_Ext(worker, "Сервис отчетов (Worker)", "Go / Python", "Фоновая генерация аналитики и PDF-документов.")
 
 ' Описания связей (потоки данных)
 Rel(client, spa, "1. Использование интерфейса", "HTTPS/WSS")
 Rel(staff, spa, "1. Управление системой", "HTTPS/WSS")
 
 Rel_D(spa, api, "2. REST API запросы", "JSON/HTTPS")
-Rel_L(spa, geo_visual, "3. Загрузка слоев карт", "JS SDK (Restricted API Key)")
 
-Rel_D(api, db, "4. SQL запросы", "TCP/IP (Internal)")
-Rel_R(api, mq, "5. Постановка задач", "AMQP/Redis Proto")
-Rel_L(api, geo_logic, "6. Верификация адресов", "REST/HTTPS (Secret Key)")
-Rel_D(api, payment, "7. Проведение транзакций", "REST/HTTPS")
-Rel_D(api, notif, "8. Отправка уведомлений", "REST/HTTPS")
+Rel_D(api, db, "3. SQL запросы", "TCP/IP (Internal)")
+Rel_L(api, geo_logic, "4. Верификация адресов", "REST/HTTPS (Secret Key)")
 
-Rel_U(worker, mq, "9. Получение задач", "Polling/Subscription")
-Rel_L(worker, db, "10. Чтение данных для отчетов", "SQL")
+Rel_L(worker, db, "5. Чтение данных для отчетов", "SQL")
 
 @enduml
